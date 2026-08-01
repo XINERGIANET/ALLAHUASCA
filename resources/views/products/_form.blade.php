@@ -303,7 +303,7 @@
                         class="text-red-500">*</span></label>
                 <input type="text" name="code" x-model="code" :readonly="!isEdit" required
                     placeholder="Ingrese el codigo"
-                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                     :class="!isEdit ? 'bg-gray-100 cursor-not-allowed text-gray-500 dark:bg-gray-800' : 'bg-transparent'" />
                 @error('code')
                     <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
@@ -315,7 +315,7 @@
                         class="text-red-500">*</span></label>
                 <input type="text" name="description" value="{{ old('description', $product->description ?? '') }}"
                     required placeholder="Ingrese la descripcion"
-                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" />
+                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" />
                 @error('description')
                     <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
                 @enderror
@@ -326,7 +326,7 @@
                         class="text-red-500">*</span></label>
                 <input type="text" name="abbreviation" value="{{ old('abbreviation', $product->abbreviation ?? '') }}"
                     required placeholder="Ingrese la abreviatura"
-                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" />
+                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" />
                 @error('abbreviation')
                     <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
                 @enderror
@@ -373,7 +373,7 @@
                 <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Estado <span
                         class="text-red-500">*</span></label>
                 <select name="status" required
-                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                     <option value="A" @selected(old('status', $product->status ?? 'A') === 'A')>Activo</option>
                     <option value="I" @selected(old('status', $product->status ?? 'A') === 'I')>Inactivo</option>
                 </select>
@@ -384,7 +384,7 @@
             <div>
                 <label class="mb-3 block text-sm font-medium text-gray-700 dark:text-gray-400">Detalles del pedido</label>
                 <textarea name="detail_options_lines" rows="6"
-                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
                     placeholder="Ingrese un detalle por linea, por ejemplo:&#10;Papa&#10;Arroz&#10;Mote">{{ old('detail_options_lines', collect($product->detail_options ?? [])->implode(PHP_EOL)) }}</textarea>
                 @error('detail_options_lines')
                     <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
@@ -405,7 +405,7 @@
                         class="text-red-500">*</span></label>
                 <input type="hidden" name="recipe" value="0" x-show="!showComplements" x-cloak>
                 <select x-bind:name="showComplements ? 'recipe' : 'recipe_skip'" x-bind:required="showComplements"
-                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                     <option value="0" @selected(old('recipe', $product?->recipe ?? 0) == 0)>No</option>
                     <option value="1" @selected(old('recipe', $product?->recipe ?? 0) == 1)>Sí</option>
                 </select>
@@ -419,7 +419,7 @@
                         class="text-red-500">*</span></label>
                 <input type="hidden" name="is_promotion" :value="isPromotion ? 1 : 0">
                 <select x-model="isPromotion"
-                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                     <option :value="false">No</option>
                     <option :value="true">Sí</option>
                 </select>
@@ -433,7 +433,7 @@
                         class="text-red-500">*</span></label>
                 <input type="hidden" name="promotion_mix_and_match" :value="promotionMixAndMatch ? 1 : 0">
                 <select x-model="promotionMixAndMatch"
-                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                     <option :value="false">No</option>
                     <option :value="true">Sí</option>
                 </select>
@@ -446,7 +446,7 @@
                 <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Kardex <span
                         class="text-red-500">*</span></label>
                 <select name="kardex" required
-                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                     <option value="N" @selected(old('kardex', $product->kardex ?? 'N') === 'N')>No</option>
                     <option value="S" @selected(old('kardex', $product->kardex ?? 'N') === 'S')>Sí</option>
                 </select>
@@ -459,7 +459,7 @@
                 <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">¿Es favorito? <span
                         class="text-red-500">*</span></label>
                 <select name="favorite" required x-model="branchFields.favorite"
-                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                     <option value="N" @selected(old('favorite', $productBranch?->favorite ?? 'N') === 'N')>No</option>
                     <option value="S" @selected(old('favorite', $productBranch?->favorite ?? 'N') === 'S')>Sí</option>
                 </select>
@@ -481,7 +481,7 @@
                                     value="{{ $printer->id }}"
                                     x-model="printerIds"
                                     :disabled="showSupplyFields"
-                                    class="h-4 w-4 rounded border-gray-300 text-[#0A2E1F] focus:ring-brand-500">
+                                    class="h-4 w-4 rounded border-gray-300 text-[#09090b] focus:ring-brand-500">
                                 <span>{{ $printer->name }}</span>
                                 <span class="ml-auto text-xs text-gray-400">{{ $printer->ip ?? '-' }}</span>
                             </label>
@@ -502,7 +502,7 @@
                     (minutos)</label>
                 <input type="number" name="duration_minutes" x-model.number="branchFields.duration_minutes"
                     value="{{ old('duration_minutes', $productBranch?->duration_minutes ?? '') }}"
-                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                     placeholder="Ej: 30" />
                 @error('duration_minutes')
                     <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
@@ -558,13 +558,13 @@
                             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Nombre del grupo</label>
                             <input type="text" x-model="group.name" :name="`promotion_groups[${groupIndex}][name]`"
                                 placeholder="Ejemplo: Cervezas"
-                                class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                                class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                         </div>
                         <div>
                             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Cantidad requerida</label>
                             <input type="number" min="0.01" step="0.01" x-model.number="group.required_quantity"
                                 :name="`promotion_groups[${groupIndex}][required_quantity]`"
-                                class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                                class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                         </div>
                         <div class="flex items-end">
                             <x-ui.button type="button" size="sm" variant="outline" @click="removePromotionGroup(groupIndex)">
@@ -586,7 +586,7 @@
                                 <div class="grid grid-cols-[minmax(0,1fr)_150px_auto] gap-3">
                                     <div>
                                         <select x-model="item.product_id" :name="`promotion_groups[${groupIndex}][items][${itemIndex}][product_id]`"
-                                            class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                                            class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                                             <option value="">Seleccione producto</option>
                                             <template x-for="option in promotionComponentOptions" :key="'promotion-option-' + option.id">
                                                 <option :value="option.id" x-text="option.description"></option>
@@ -596,7 +596,7 @@
                                     <div>
                                         <input type="number" min="0" step="0.01" x-model.number="item.default_quantity"
                                             :name="`promotion_groups[${groupIndex}][items][${itemIndex}][default_quantity]`"
-                                            class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                                            class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                                     </div>
                                     <div class="flex items-center justify-end">
                                         <x-ui.button type="button" size="sm" variant="outline" @click="removePromotionItem(groupIndex, itemIndex)">
@@ -651,7 +651,7 @@
                     <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Sede <span
                             class="text-red-500">*</span></label>
                     <select name="branch_id" x-model="selectedBranchId" required
-                        class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                        class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                         @foreach ($branches as $b)
                             <option value="{{ $b->id }}">{{ $b->legal_name }}</option>
                         @endforeach
@@ -668,7 +668,7 @@
                         class="text-red-500">*</span></label>
                 <input type="number" name="purchase_price" step="0.01" x-model.number="branchFields.purchase_price"
                     value="{{ old('purchase_price', $productBranch?->purchase_price ?? 0) }}" required min="0"
-                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                     placeholder="0.00" />
                 @error('purchase_price')
                     <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
@@ -678,7 +678,7 @@
                 <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Compra mínima</label>
                 <input type="number" name="minimum_purchase" step="0.01" x-model.number="branchFields.minimum_purchase"
                     value="{{ old('minimum_purchase', $productBranch?->minimum_purchase ?? '') }}"
-                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                     placeholder="0.00" />
                 @error('minimum_purchase')
                     <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
@@ -689,7 +689,7 @@
                         class="text-red-500">*</span></label>
                 <input type="number" name="stock" step="0.01" x-model.number="branchFields.stock"
                     value="{{ old('stock', $productBranch?->stock ?? '') }}" required min="0"
-                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                     placeholder="0.00" />
                 @error('stock')
                     <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
@@ -702,7 +702,7 @@
                         class="text-red-500">*</span></label>
                 <input type="number" name="stock_minimum" step="0.01" x-model.number="branchFields.stock_minimum"
                     value="{{ old('stock_minimum', $productBranch?->stock_minimum ?? '') }}" required min="0"
-                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                     placeholder="0.00" />
                 @error('stock_minimum')
                     <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
@@ -713,7 +713,7 @@
                         class="text-red-500">*</span></label>
                 <input type="number" name="stock_maximum" step="0.01" x-model.number="branchFields.stock_maximum"
                     value="{{ old('stock_maximum', $productBranch?->stock_maximum ?? '') }}" required min="0"
-                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                     placeholder="0.00" />
                 @error('stock_maximum')
                     <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
@@ -736,7 +736,7 @@
                     <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Sede <span
                             class="text-red-500">*</span></label>
                     <select name="branch_id" x-model="selectedBranchId" required
-                        class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                        class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                         @foreach ($branches as $b)
                             <option value="{{ $b->id }}">{{ $b->legal_name }}</option>
                         @endforeach
@@ -754,7 +754,7 @@
                 <input type="number" :name="showBranchDetail ? 'price' : 'price_skip'" step="0.01"
                     x-model.number="branchFields.price" value="{{ old('price', $productBranch?->price ?? '') }}"
                     :required="showBranchDetail"
-                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                     placeholder="0.00" />
                 @error('price')
                     <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
@@ -771,7 +771,7 @@
                     x-model.number="branchFields.purchase_price"
                     value="{{ old('purchase_price', $productBranch?->purchase_price ?? 0) }}"
                     :required="showPurchaseFields" min="0"
-                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                     placeholder="0.00" />
                 @error('purchase_price')
                     <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
@@ -798,7 +798,7 @@
                     class="dark:bg-dark-900 shadow-theme-xs h-11 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm placeholder:text-gray-400 dark:border-gray-700 dark:text-white/90 dark:placeholder:text-white/30"
                     :class="disableStockEdit
                         ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed text-gray-500'
-                        : 'bg-transparent focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] text-gray-800 focus:ring-3 focus:outline-hidden dark:bg-gray-900'"
+                        : 'bg-transparent focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] text-gray-800 focus:ring-3 focus:outline-hidden dark:bg-gray-900'"
                     placeholder="0.00" />
                 @error('stock')
                     <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
@@ -811,7 +811,7 @@
                 <input type="number" :name="showBranchDetail ? 'stock_minimum' : 'stock_minimum_skip'" step="0.01"
                     value="{{ old('stock_minimum', $productBranch?->stock_minimum ?? '') }}"
                     x-model.number="branchFields.stock_minimum" :required="showBranchDetail" min="0"
-                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                     placeholder="0.00" />
                 @error('stock_minimum')
                     <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
@@ -824,7 +824,7 @@
                 <input type="number" :name="showBranchDetail ? 'stock_maximum' : 'stock_maximum_skip'" step="0.01"
                     value="{{ old('stock_maximum', $productBranch?->stock_maximum ?? '') }}"
                     x-model.number="branchFields.stock_maximum" :required="showBranchDetail" min="0"
-                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                     placeholder="0.00" />
                 @error('stock_maximum')
                     <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
@@ -836,7 +836,7 @@
                 <input type="number" :name="showBranchDetail ? 'minimum_sell' : 'minimum_sell_skip'" step="0.01"
                     x-model.number="branchFields.minimum_sell"
                     value="{{ old('minimum_sell', $productBranch?->minimum_sell ?? '') }}" :required="showBranchDetail"
-                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                     placeholder="0.00" />
                 @error('minimum_sell')
                     <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
@@ -860,7 +860,7 @@
                     class="dark:bg-dark-900 shadow-theme-xs h-11 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm placeholder:text-gray-400 dark:border-gray-700 dark:text-white/90 dark:placeholder:text-white/30"
                     :class="platosCategoriaIds.includes(Number(categoryId))
                         ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed text-gray-500'
-                        : 'bg-transparent focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] text-gray-800 focus:ring-3 focus:outline-hidden dark:bg-gray-900'"
+                        : 'bg-transparent focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] text-gray-800 focus:ring-3 focus:outline-hidden dark:bg-gray-900'"
                     placeholder="0.00" />
                 @error('minimum_purchase')
                     <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
@@ -899,7 +899,7 @@
                 <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Tasa
                     impositiva</label>
                 <select name="tax_rate_id" x-model="branchFields.tax_rate_id"
-                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                     <option value="">Seleccione tasa impositiva</option>
                     @if (isset($taxRates))
                         @foreach ($taxRates as $rate)
@@ -931,7 +931,7 @@
                         class="text-red-500">*</span></label>
                 <select name="complement" x-model="complementValue" x-bind:required="showComplements"
                     x-ref="complementSelect"
-                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                     <option value="NO" @selected(old('complement', $product->complement ?? 'NO') === 'NO')>No</option>
                     <option value="HAS" @selected(old('complement', $product->complement ?? 'NO') === 'HAS')>Tiene
                         complementos</option>
@@ -947,7 +947,7 @@
                 <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Modo
                     complemento</label>
                 <select name="complement_mode" x-model="complementMode" x-ref="modeSelect"
-                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                     <option value="" @selected(old('complement_mode', $product->complement_mode ?? '') === '')>Sin modo
                     </option>
                     <option value="ALL" @selected(old('complement_mode', $product->complement_mode ?? '') === 'ALL')>Todo
@@ -964,7 +964,7 @@
                         class="text-red-500">*</span></label>
                 <select name="classification" x-model="classificationValue" x-bind:required="showComplements"
                     x-ref="classificationSelect"
-                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                     <option value="GOOD" x-bind:selected="classificationValue === 'GOOD'">Bien</option>
                     <option value="SERVICE" x-bind:selected="classificationValue === 'SERVICE'">Servicio</option>
                 </select>
@@ -1043,7 +1043,7 @@
                 </div>
 
                 <input type="file" name="image" id="image-input" accept="image/*" @change="showPreview($event)"
-                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-[#124731]/10 file:text-[#124731] hover:file:bg-[#124731]/20 dark:file:bg-[#124731]/20 dark:file:text-[#124731]" />
+                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-[#111827]/10 file:text-[#111827] hover:file:bg-[#111827]/20 dark:file:bg-[#111827]/20 dark:file:text-[#111827]" />
 
                 <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
                     📁 JPG, PNG, GIF, WEBP • Máximo 2MB
@@ -1058,7 +1058,7 @@
             <div>
                 <label class="mb-3 block text-sm font-medium text-gray-700 dark:text-gray-400">Características</label>
                 <textarea name="features" rows="6"
-                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                    class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
                     placeholder="Describa las características principales del producto...">{{ old('features', $product->features ?? '') }}</textarea>
                 @error('features')
                     <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>

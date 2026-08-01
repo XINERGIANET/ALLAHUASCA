@@ -122,7 +122,7 @@
                             </span>
                             <input type="text" name="search" value="{{ $search }}"
                                 placeholder="Código o descripción"
-                                class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 pl-10 text-sm text-gray-800 placeholder:text-gray-400 shadow-theme-xs focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-[#124731]" />
+                                class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 pl-10 text-sm text-gray-800 placeholder:text-gray-400 shadow-theme-xs focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-[#111827]" />
                         </div>
                     </div>
             
@@ -143,7 +143,7 @@
                     <div class="flex gap-2 items-end">
                         <x-ui.button size="md" variant="primary" type="submit"
                             class="h-11 px-5 shadow-sm hover:shadow-md transition-all duration-200 active:scale-95"
-                            style="background-color: #0A2E1F; border-color: #0A2E1F;">
+                            style="background-color: #09090b; border-color: #09090b;">
                             <i class="ri-search-line text-gray-100"></i>
                             <span class="font-medium text-gray-100">Buscar</span>
                         </x-ui.button>
@@ -220,7 +220,7 @@
             <div
                 class="table-responsive mt-4 rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
                 <table class="w-full min-w-[1100px]">
-                    <thead style="background-color: #124731; color: #FFFFFF;">
+                    <thead style="background-color: #111827; color: #FFFFFF;">
                         <tr class="text-white">
                             <th class="w-12 px-3 py-4 text-center first:rounded-tl-xl">
                                 <input type="checkbox" aria-label="Seleccionar todos los productos de esta página"
@@ -265,7 +265,7 @@
                                 <td class="px-4 py-4 text-center sticky-left">
                                     <button type="button"
                                         @click="openRow === {{ $product->id }} ? openRow = null : openRow = {{ $product->id }}"
-                                        class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#124731] text-white transition hover:bg-[#0A2E1F] dark:bg-[#124731] dark:text-white">
+                                        class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#111827] text-white transition hover:bg-[#09090b] dark:bg-[#111827] dark:text-white">
                                         <i class="ri-add-line" x-show="openRow !== {{ $product->id }}"></i>
                                         <i class="ri-subtract-line" x-show="openRow === {{ $product->id }}"></i>
                                     </button>
@@ -509,7 +509,7 @@
                 <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div class="flex items-center gap-4">
                         <div
-                            class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#124731]/10 text-[#124731] dark:bg-[#124731]/20">
+                            class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#111827]/10 text-[#111827] dark:bg-[#111827]/20">
                             <i class="ri-store-line text-2xl"></i>
                         </div>
                         <div>
@@ -598,7 +598,7 @@
                 <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div class="flex items-center gap-4">
                         <div
-                            class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#124731]/10 text-[#124731] dark:bg-[#124731]/20">
+                            class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#111827]/10 text-[#111827] dark:bg-[#111827]/20">
                             <i class="ri-restaurant-line text-2xl"></i>
                         </div>
                         <div>

@@ -37,7 +37,7 @@
         <div class="p-6 sm:p-8">
             <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div class="flex items-center gap-4">
-                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#124731]/10 text-[#124731] dark:bg-[#124731]/20">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#111827]/10 text-[#111827] dark:bg-[#111827]/20">
                         <i class="ri-pencil-line text-2xl"></i>
                     </div>
                     <div>

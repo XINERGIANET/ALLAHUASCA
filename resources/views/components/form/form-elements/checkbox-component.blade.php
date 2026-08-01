@@ -6,9 +6,9 @@
                 <div class="relative">
                     <input type="checkbox" id="checkboxLabelOne" class="sr-only"
                         @change="checkboxToggle = !checkboxToggle" />
-                    <div :class="checkboxToggle ? 'border-[#124731] bg-[#124731]' :
+                    <div :class="checkboxToggle ? 'border-[#111827] bg-[#111827]' :
                         'bg-transparent border-gray-300 dark:border-gray-700'"
-                        class="f hover:border-[#124731] dark:hover:border-[#124731] mr-3 flex h-5 w-5 items-center justify-center rounded-md border-[1.25px]">
+                        class="f hover:border-[#111827] dark:hover:border-[#111827] mr-3 flex h-5 w-5 items-center justify-center rounded-md border-[1.25px]">
                         <span :class="checkboxToggle ? '' : 'opacity-0'">
                             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
                                 xmlns="http://www.w3.org/2000/svg">
@@ -28,9 +28,9 @@
                 <div class="relative">
                     <input type="checkbox" id="checkboxLabelTwo" class="sr-only"
                         @change="checkboxToggle = !checkboxToggle" />
-                    <div :class="checkboxToggle ? 'border-[#124731] bg-[#124731]' :
+                    <div :class="checkboxToggle ? 'border-[#111827] bg-[#111827]' :
                         'bg-transparent border-gray-300 dark:border-gray-700'"
-                        class="hover:border-[#124731] dark:hover:border-[#124731] mr-3 flex h-5 w-5 items-center justify-center rounded-md border-[1.25px]">
+                        class="hover:border-[#111827] dark:hover:border-[#111827] mr-3 flex h-5 w-5 items-center justify-center rounded-md border-[1.25px]">
                         <span :class="checkboxToggle ? '' : 'opacity-0'">
                             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
                                 xmlns="http://www.w3.org/2000/svg">
@@ -51,7 +51,7 @@
                     <input type="checkbox" id="checkboxLabelThree" class="peer sr-only"
                         @change="checkboxToggle = !checkboxToggle" disabled />
                     <div :class="checkboxToggle ? 'bg-transparent border-gray-200 dark:border-gray-800' :
-                        'border-[#124731] bg-[#124731]'"
+                        'border-[#111827] bg-[#111827]'"
                         class="mr-3 flex h-5 w-5 items-center justify-center rounded-md border-[1.25px]">
                         <span :class="checkboxToggle ? '' : 'opacity-0'">
                             <svg class="stroke-gray-200 dark:stroke-gray-800" width="14" height="14"

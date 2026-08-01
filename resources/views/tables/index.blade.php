@@ -86,11 +86,11 @@
                             name="search"
                             value="{{ $search }}"
                             placeholder="Buscar por nombre"
-                            class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] focus:ring-[#124731]/10 dark:focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 pl-12 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                            class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 pl-12 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                         />
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        <x-ui.button size="md" variant="primary" type="submit" class="flex-1 sm:flex-none h-11 px-4 shadow-sm hover:shadow-md transition-all duration-200 active:scale-95" style="background-color: #0A2E1F; border-color: #0A2E1F;">
+                        <x-ui.button size="md" variant="primary" type="submit" class="flex-1 sm:flex-none h-11 px-4 shadow-sm hover:shadow-md transition-all duration-200 active:scale-95" style="background-color: #09090b; border-color: #09090b;">
                             <i class="ri-search-line text-gray-100"></i>
                             <span class="font-medium text-gray-100">Buscar</span>
                         </x-ui.button>
@@ -135,7 +135,7 @@
             <div class="mt-4 table-responsive rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
                 <table class="w-full min-w-max">
                     <thead>
-                        <tr style="background-color: #124731; color: #FFFFFF;">
+                        <tr style="background-color: #111827; color: #FFFFFF;">
                             <th class="px-5 py-3 text-left sm:px-6 first:rounded-tl-xl sticky-left-header">
                                 <p class="font-medium text-white text-theme-xs dark:text-white">Nombre</p>
                             </th>
@@ -328,7 +328,7 @@
             <div class="p-6 sm:p-8">
                 <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div class="flex items-center gap-4">
-                        <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#124731]/10 text-[#124731] dark:bg-[#124731]/20">
+                        <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#111827]/10 text-[#111827] dark:bg-[#111827]/20">
                             <i class="ri-table-line text-2xl"></i>
                         </div>
                         <div>
@@ -351,12 +351,12 @@
 
                 <div class="mb-6 grid grid-cols-2 rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
                     <button type="button" @click="mode = 'single'"
-                        :class="mode === 'single' ? 'bg-white text-[#124731] shadow-sm dark:bg-gray-700 dark:text-white' : 'text-gray-500 dark:text-gray-400'"
+                        :class="mode === 'single' ? 'bg-white text-[#111827] shadow-sm dark:bg-gray-700 dark:text-white' : 'text-gray-500 dark:text-gray-400'"
                         class="rounded-md px-4 py-2.5 text-sm font-medium transition">
                         Una mesa
                     </button>
                     <button type="button" @click="mode = 'bulk'"
-                        :class="mode === 'bulk' ? 'bg-white text-[#124731] shadow-sm dark:bg-gray-700 dark:text-white' : 'text-gray-500 dark:text-gray-400'"
+                        :class="mode === 'bulk' ? 'bg-white text-[#111827] shadow-sm dark:bg-gray-700 dark:text-white' : 'text-gray-500 dark:text-gray-400'"
                         class="rounded-md px-4 py-2.5 text-sm font-medium transition">
                         Varias mesas
                     </button>
@@ -393,7 +393,7 @@
                     <div class="grid gap-5 sm:grid-cols-2">
                         <div class="sm:col-span-2">
                             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Salón</label>
-                            <select name="area_id" required class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                            <select name="area_id" required class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                                 <option value="">Seleccione salón</option>
                                 @foreach ($areas as $area)
                                     <option value="{{ $area->id }}" @selected(old('area_id') == $area->id)>{{ $area->name }}</option>
@@ -404,28 +404,28 @@
                         <div>
                             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Prefijo</label>
                             <input type="text" name="prefix" value="{{ old('prefix') }}" maxlength="200" placeholder="Opcional. Ej: Mesa"
-                                class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                                class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                             @error('prefix') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
                         <div>
                             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Número inicial</label>
                             <input type="number" name="start_number" min="1" max="999999" value="{{ old('start_number', 1) }}" required
-                                class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                                class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                         </div>
                         <div>
                             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Cantidad de mesas</label>
                             <input type="number" name="quantity" min="1" max="200" value="{{ old('quantity', 10) }}" required
-                                class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                                class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                             @error('quantity') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
                         <div>
                             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Capacidad por mesa</label>
                             <input type="number" name="capacity" min="1" value="{{ old('capacity', 4) }}" placeholder="Ej: 4"
-                                class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                                class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                         </div>
                         <div>
                             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Estado</label>
-                            <select name="status" class="dark:bg-dark-900 shadow-theme-xs focus:border-[#124731] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                            <select name="status" class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                                 <option value="1" @selected(old('status', 1) == 1)>Activo</option>
                                 <option value="0" @selected(old('status', 1) == 0)>Inactivo</option>
                             </select>
@@ -453,7 +453,7 @@
             <div class="p-6 sm:p-8">
                 <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div class="flex items-center gap-4">
-                        <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#124731]/10 text-[#124731] dark:bg-[#124731]/20">
+                        <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#111827]/10 text-[#111827] dark:bg-[#111827]/20">
                             <i class="ri-layout-grid-line text-2xl"></i>
                         </div>
                         <div>

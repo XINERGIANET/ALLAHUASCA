@@ -390,7 +390,7 @@
                 <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div class="flex items-center gap-4">
                         <div
-                            class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#124731]/10 text-[#124731] dark:bg-[#124731]/20 dark:text-[#124731]">
+                            class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#111827]/10 text-[#111827] dark:bg-[#111827]/20 dark:text-[#111827]">
                             <i class="ri-user-add-line text-2xl"></i>
                         </div>
                         <div>
@@ -418,7 +418,7 @@
                             Cancelar
                         </button>
                         <button type="submit"
-                            class="px-5 py-2.5 rounded-xl bg-[#124731] text-white font-semibold hover:bg-[#0A2E1F] shadow-lg shadow-[#124731]/30 transition-all">
+                            class="px-5 py-2.5 rounded-xl bg-[#111827] text-white font-semibold hover:bg-[#09090b] shadow-lg shadow-[#111827]/30 transition-all">
                             <i class="ri-save-line mr-1"></i> Guardar Cliente
                         </button>
                     </div>

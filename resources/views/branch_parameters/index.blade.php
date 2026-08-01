@@ -177,7 +177,7 @@
                                                     <span>{{ $qzConfigured ? 'Archivo configurado para esta sucursal' : 'Archivo pendiente de cargar' }}</span>
                                                 </div>
                                                 <input type="file" name="{{ $qzInputName }}" accept="{{ $qzAccept }}"
-                                                    class="block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 file:mr-3 file:rounded-md file:border-0 file:bg-[#124731] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                                                    class="block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 file:mr-3 file:rounded-md file:border-0 file:bg-[#111827] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
                                                 <p class="text-xs text-gray-500">Por seguridad el contenido no se muestra. Para reemplazarlo, cargue ambos archivos QZ y guarde.</p>
                                             </div>
                                         @elseif($isReceiptPrinterParam)

@@ -19,9 +19,9 @@
         .badge-danger { background: #fee2e2; color: #b91c1c; }
         .section { margin-bottom: 16px; page-break-inside: avoid; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .report-header { text-align: center; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 2px solid #124731; }
+        .report-header { text-align: center; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 2px solid #111827; }
         .report-logo { display: block; max-width: 105px; max-height: 70px; margin: 0 auto 8px; object-fit: contain; }
-        .report-header h1 { color: #124731; }
+        .report-header h1 { color: #111827; }
         @media print {
             body { padding: 8px; }
         }
