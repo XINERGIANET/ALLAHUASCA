@@ -1153,6 +1153,9 @@ es                        style="max-height: 80vh;">
                 const searchInput = document.getElementById('product-search') || document.getElementById('search-products');
                 const searchClearBtn = document.getElementById('search-products-clear');
                 if (tab === 'cobro') {
+                    if (typeof window.openCashDrawer === 'function') {
+                        window.openCashDrawer();
+                    }
                     resumen?.classList.add('hidden');
                     cobro?.classList.remove('hidden');
                     cobro?.classList.add('flex');

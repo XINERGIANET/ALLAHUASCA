@@ -39,6 +39,13 @@
                             </div>
                         </div>
                     </div>
+                    <div>
+                        <button type="button" onclick="window.openCashDrawer?.()" title="Abrir Caja Chica / Cajón Monedero"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/80 rounded-full border border-emerald-300/80 dark:border-emerald-700/80 transition-all shadow-xs">
+                            <i class="ri-door-open-line text-sm text-emerald-600 dark:text-emerald-400"></i>
+                            <span>Abrir Caja</span>
+                        </button>
+                    </div>
                 </header>
 
                 <div class="grid grid-cols-1 gap-4 lg:grid-cols-3 flex-1 p-4 sm:p-6 min-h-0 overflow-hidden bg-white dark:bg-transparent">
@@ -1826,6 +1833,13 @@ pmSelectionButtons.forEach(btn => {
                         this.textContent = originalText;
                     });
             });
+
+            // Al cargar la vista de cobro, abrir caja chica automáticamente
+            setTimeout(() => {
+                if (typeof window.openCashDrawer === 'function') {
+                    window.openCashDrawer();
+                }
+            }, 300);
         });
     </script>
 @endsection

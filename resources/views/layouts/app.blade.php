@@ -16,6 +16,29 @@
     @php
         $qzDefaultPrinter = in_array(strtolower(request()->getHost()), ['localhost', '127.0.0.1', '::1']) ? 'BARRA' : 'BARRA2';
         $qzCertPairTryOrder = config('qz.cert_pair_try_order', ['primary', 'secondary', 'tertiary']);
+
+        $cashDrawerPrinterName = null;
+        $branchId = session('branch_id');
+        if ($branchId) {
+            $printerId = \Illuminate\Support\Facades\DB::table('branch_parameters as bp')
+                ->join('parameters as p', 'p.id', '=', 'bp.parameter_id')
+                ->where('bp.branch_id', $branchId)
+                ->whereNull('bp.deleted_at')
+                ->whereNull('p.deleted_at')
+                ->where(function ($q) {
+                    $q->where('p.description', 'like', '%caja%')
+                      ->orWhere('p.description', 'like', '%comprobante%');
+                })
+                ->orderByRaw("CASE WHEN LOWER(p.description) LIKE '%caja%' THEN 1 ELSE 2 END")
+                ->value('bp.value');
+
+            if ($printerId && is_numeric($printerId)) {
+                $cashDrawerPrinterName = \App\Models\PrinterBranch::where('id', $printerId)->value('name');
+            }
+        }
+        if ($cashDrawerPrinterName) {
+            $qzDefaultPrinter = $cashDrawerPrinterName;
+        }
     @endphp
     @stack('head')
     <script>
@@ -29,6 +52,7 @@
             certPairTryOrder: @json($qzCertPairTryOrder),
             defaultPrinterName: @json($qzDefaultPrinter),
             printerName: @json($qzDefaultPrinter),
+            cashDrawerPrinterName: @json($cashDrawerPrinterName),
             printMode: @json(config('qz.print_mode', 'auto')),
             productionLock: @json((bool) config('qz.production_lock', false)),
             allowedOrigins: @json(config('qz.allowed_origins', [])),

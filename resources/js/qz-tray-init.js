@@ -368,6 +368,76 @@ function warmQzConnection() {
     }
 }
 
+/**
+ * Envía el pulso ESC/POS para abrir la caja chica / cajón monedero conectado a la ticketera.
+ * @param {string} [printerName] Nombre opcional de la impresora
+ */
+export async function openCashDrawer(printerName) {
+    try {
+        const qzLib = getQz();
+        let targetPrinter = String(printerName || '').trim();
+        if (!targetPrinter) {
+            const cfg = window.__qzConfig || {};
+            targetPrinter = String(cfg.cashDrawerPrinterName || '').trim();
+        }
+        if (!targetPrinter) {
+            try {
+                targetPrinter = localStorage.getItem('xinergia_local_printer_name') ||
+                                localStorage.getItem('xinergia_print_bridge_printer') || '';
+            } catch (e) {}
+        }
+        if (!targetPrinter && qzLib?.printers?.getDefault) {
+            try {
+                targetPrinter = await qzLib.printers.getDefault();
+            } catch (e) {}
+        }
+        if (!targetPrinter) {
+            const cfg = window.__qzConfig || {};
+            targetPrinter = String(cfg.defaultPrinterName || cfg.printerName || 'BARRA2').trim();
+        }
+
+        if (qzLib) {
+            const connected = await connectQzWithCertPairFallback(qzLib, targetPrinter);
+            if (connected) {
+                const config = qzLib.configs.create(targetPrinter);
+                // Pulse comandos ESC/POS para Pin 2 y Pin 5 (G3AAGRahcAEZGg== en Base64)
+                await qzLib.print(config, [{
+                    type: 'raw',
+                    format: 'command',
+                    flavor: 'base64',
+                    data: 'G3AAGRahcAEZGg==',
+                }]);
+                console.info('[QZ Xinergia] Pulso de apertura de caja enviado a la ticketera:', targetPrinter);
+                return true;
+            }
+        }
+
+        // Respaldo vía servidor (PrintBridgeQueue) para estaciones sin QZ local
+        const csrfToken = qzCsrfToken();
+        if (csrfToken) {
+            const fd = new FormData();
+            fd.append('printer_name', targetPrinter);
+            const res = await fetch('/caja/abrir-cajon', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                },
+                body: fd
+            });
+            if (res.ok) {
+                console.info('[PrintBridge] Solicitud de apertura de caja enviada.');
+                return true;
+            }
+        }
+    } catch (err) {
+        console.warn('[QZ Xinergia] No se pudo abrir la caja chica:', err);
+    }
+    return false;
+}
+
+window.openCashDrawer = openCashDrawer;
 window.__qzConnectWithCertPairFallback = connectQzWithCertPairFallback;
 window.__qzConfigureQzSecurityForPair = configureQzSecurityForPair;
 window.__qzResolveCertPairTryOrder = resolveCertPairTryOrder;

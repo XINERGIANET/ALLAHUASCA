@@ -132,6 +132,15 @@
                     <div x-data="{ openCashModal: @js((bool) ($forceCashRegisterModal ?? false)), cashSelectionRequired: @js((bool) ($cashSelectionRequired ?? false)) }"
                         class="flex items-center gap-2">
 
+                        <button type="button" onclick="window.openCashDrawer?.()" title="Abrir Caja Chica / Cajón Monedero"
+                            class="relative flex items-center justify-center text-emerald-400 transition-all bg-emerald-500/10 border border-emerald-500/30 rounded-full hover:bg-emerald-500/30 h-11 w-11 group shadow-xs">
+                            <i class="ri-door-open-line text-lg text-emerald-300"></i>
+                            <span
+                                class="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap rounded-md bg-gray-900 border border-gray-700 px-2 py-1 text-[10px] font-medium text-emerald-300 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 z-50">
+                                Abrir Caja Chica
+                            </span>
+                        </button>
+
                         <button type="button" @click="openCashModal = true" title="Cambiar Caja"
                             class="relative flex items-center justify-center text-white transition-all bg-white/5 border border-white/10 rounded-full hover:text-white h-11 w-11 hover:bg-white/10 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white">
 

@@ -333,10 +333,17 @@
                                 Resumen
                             </button>
                             @if ($canCharge ?? true)
-                                <button type="button" id="tab-cobro" onclick="window.switchAsideTab?.('cobro')"
-                                    class="py-3 px-4 text-sm font-bold transition-all rounded-full bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:border-[#111827]/30 hover:text-[#111827] dark:hover:text-[#111827]">
-                                    Cobro
-                                </button>
+                                <div class="flex items-center gap-1.5">
+                                    <button type="button" id="tab-cobro" onclick="window.switchAsideTab?.('cobro')"
+                                        class="flex-1 py-3 px-4 text-sm font-bold transition-all rounded-full bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:border-[#111827]/30 hover:text-[#111827] dark:hover:text-[#111827]">
+                                        Cobro
+                                    </button>
+                                    <button type="button" onclick="window.openCashDrawer?.()" title="Abrir Caja Chica / Cajón Monedero"
+                                        class="py-3 px-3.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/80 rounded-full border border-emerald-300/80 dark:border-emerald-700/80 transition-all flex items-center gap-1 shrink-0">
+                                        <i class="ri-door-open-line text-sm text-emerald-600 dark:text-emerald-400"></i>
+                                        <span class="hidden sm:inline">Abrir Caja</span>
+                                    </button>
+                                </div>
                             @endif
                         </div>
                     </div>
@@ -6711,6 +6718,9 @@
                         }
                         if (tab === 'cobro') {
                             ensureCounterSaleDefaultClientSelected();
+                            if (typeof window.openCashDrawer === 'function') {
+                                window.openCashDrawer();
+                            }
                             resumen?.classList.add('hidden');
                             cobro?.classList.remove('hidden');
                             cobro?.classList.add('flex');
