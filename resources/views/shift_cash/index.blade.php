@@ -390,7 +390,7 @@
             @close-shift-cash-modal.window="open = false"
             :isOpen="false"
             :showCloseButton="false"
-            class="max-w-3xl"
+            class="max-w-4xl"
         >
             <form
                 id="shift-print-form"
@@ -398,23 +398,42 @@
                 x-data="{ selectedShiftId: null }"
                 @open-shift-cash-modal.window="selectedShiftId = $event.detail?.shiftId ?? null"
             >
-                <div class="p-6 sm:p-8">
-                    <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div class="flex items-center gap-4">
+                <div class="p-6 sm:p-7 border-b border-gray-100 dark:border-gray-800">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 text-[#111827] dark:text-gray-200 flex items-center justify-center font-semibold">
+                                <i class="ri-file-pdf-2-line text-xl"></i>
+                            </div>
                             <div>
-                                <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Imprimir PDF del turno de caja</h3>
-                                <p class="mt-1 text-sm text-gray-500">Turno cerrado o en curso: en curso incluye movimientos hasta ahora. Elige las secciones del PDF.</p>
+                                <h3 class="text-lg font-bold text-gray-900 dark:text-white">Imprimir PDF del Turno de Caja</h3>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Turno cerrado o en curso (incluye movimientos hasta ahora). Elige las secciones del PDF.</p>
                             </div>
                         </div>
+                        <button type="button" @click="$dispatch('close-shift-cash-modal')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+                            <i class="ri-close-line text-xl"></i>
+                        </button>
                     </div>
                 </div>
-                @include('shift_cash.modal_cash')
-                <div class="p-6 sm:p-8 flex items-center justify-end gap-3">
+
+                <div class="py-2">
+                    @include('shift_cash.modal_cash')
+                </div>
+
+                <div class="p-5 sm:px-7 border-t border-gray-100 dark:border-gray-800 flex items-center justify-end gap-3 bg-gray-50/50 dark:bg-gray-900/40 rounded-b-2xl">
+                    <x-ui.button
+                        size="md"
+                        variant="outline"
+                        type="button"
+                        class="h-11 px-5 rounded-xl border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                        @click="$dispatch('close-shift-cash-modal')"
+                    >
+                        <i class="ri-close-line"></i> <span>Cancelar</span>
+                    </x-ui.button>
                     <x-ui.button
                         size="md"
                         variant="primary"
                         type="button"
-                        class="h-11 px-4"
+                        class="h-11 px-6 rounded-xl font-medium shadow-md shadow-gray-900/20 hover:shadow-gray-900/30 transition-all flex items-center gap-2"
                         style="background-color: #09090b;"
                         x-bind:disabled="!selectedShiftId"
                         @click="
@@ -422,20 +441,10 @@
                             const form = document.getElementById('shift-print-form');
                             const qs = form ? new URLSearchParams(new FormData(form)).toString() : '';
                             const base = '{{ url('/caja/turno-caja') }}/' + selectedShiftId + '/print';
-                            window.location.assign(base + (qs ? '?' + qs : ''));
+                            window.open(base + (qs ? '?' + qs + '&inline=1' : '?inline=1'), '_blank');
                         "
                     >
-                        <i class="ri-file-pdf-line text-gray-100"></i> <span class="text-gray-100">Descargar PDF</span>
-                    </x-ui.button>
-                    <x-ui.button
-                        size="md"
-                        variant="outline"
-                        type="button"
-                        class="h-11 px-4"
-                        style="background-color: #FFFFFF; color: #09090b;"
-                        @click="$dispatch('close-shift-cash-modal')"
-                    >
-                        <i class="ri-close-line"></i> <span>Cancelar</span>
+                        <i class="ri-external-link-line text-base text-gray-100"></i> <span class="text-gray-100">Abrir PDF</span>
                     </x-ui.button>
                 </div>
             </form>
