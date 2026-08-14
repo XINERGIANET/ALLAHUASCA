@@ -466,7 +466,8 @@ class DashboardController extends Controller
             ->with([
                 'table',
                 'area',
-                'movement.user.person',
+                'movement.person',
+                'movement.user',
                 'details' => function ($q) {
                     $q->whereNull('deleted_at')->orderBy('id');
                 },

@@ -20,19 +20,6 @@
                             {{ ucfirst(now()->locale('es')->isoFormat('dddd D [de] MMMM, YYYY')) }} · <span class="text-indigo-300 font-semibold">{{ $activeOrdersCount }} mesa(s) activas</span>
                         </p>
                     </div>
-
-                    <div class="flex flex-wrap items-center gap-2 shrink-0">
-                        <a href="{{ route('orders.index') }}" 
-                           class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 transition-all transform active:scale-95">
-                            <i class="ri-restaurant-2-line text-lg"></i>
-                            <span>Mapa de Mesas</span>
-                        </a>
-                        <a href="{{ route('orders.create') }}" 
-                           class="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-sm backdrop-blur-md border border-white/15 transition-all">
-                            <i class="ri-add-circle-line text-lg text-emerald-400"></i>
-                            <span>Nuevo Pedido</span>
-                        </a>
-                    </div>
                 </div>
             </div>
 
@@ -176,7 +163,7 @@
                                 $areaName = $order->area ? $order->area->name : null;
                                 $timeFormatted = $order->created_at ? $order->created_at->format('H:i') : '--:--';
                                 $elapsedMinutes = $order->created_at ? $order->created_at->diffInMinutes(now()) : 0;
-                                $orderWaiterName = $order->movement?->user?->person ? trim($order->movement->user->person->first_name . ' ' . $order->movement->user->person->last_name) : ($order->movement?->user?->name ?? '');
+                                $orderWaiterName = $order->movement?->person_name ?: ($order->movement?->person ? trim(($order->movement->person->first_name ?? '') . ' ' . ($order->movement->person->last_name ?? '')) : ($order->movement?->user_name ?? ($order->movement?->user?->name ?? '')));
                             @endphp
 
                             <div class="rounded-2xl bg-white dark:bg-gray-800 border {{ $isOpen ? 'border-amber-300/80 dark:border-amber-700/60 shadow-md shadow-amber-500/5' : 'border-slate-200 dark:border-gray-700 shadow-xs' }} flex flex-col overflow-hidden transition-all hover:shadow-lg">
