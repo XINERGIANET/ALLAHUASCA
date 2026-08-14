@@ -64,6 +64,13 @@
                 </h1>
             @endif
 
+            <!-- Botón directo Mapa de Mesas (/Pedidos) -->
+            <a href="{{ route('orders.index') }}" title="Ir al Mapa de Mesas (/pedidos)"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/90 hover:bg-indigo-500 text-white font-extrabold text-xs shadow-md shadow-indigo-600/30 border border-indigo-400/40 transition-all transform active:scale-95 ml-2">
+                <i class="ri-restaurant-2-line text-sm text-white"></i>
+                <span class="hidden sm:inline">Mapa de Mesas</span>
+            </a>
+
             <!-- Logo (mobile only) -->
             <a href="/" class="xl:hidden">
                 <img class="brightness-0 invert opacity-90" src="/images/logo/Xinergia.png" alt="Logo" width="130"

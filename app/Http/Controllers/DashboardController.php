@@ -13,6 +13,10 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
+        if (current_user_is_mozo()) {
+            return $this->mozoDashboard($request);
+        }
+
         $startDate = $request->input('start_date') ? \Carbon\Carbon::parse($request->input('start_date'))->startOfDay() : now()->startOfDay();
         $endDate = $request->input('end_date') ? \Carbon\Carbon::parse($request->input('end_date'))->endOfDay() : now()->endOfDay();
 
@@ -438,5 +442,102 @@ class DashboardController extends Controller
                 }
             ])
             ->get();
+    }
+
+    /**
+     * Dashboard adaptado para perfil Mozo: muestra los pedidos/comandas del día ordenados por hora
+     */
+    public function mozoDashboard(Request $request)
+    {
+        $branchId = effective_branch_id() ?: session('branch_id');
+        $user = auth()->user();
+        $userPersonId = $user?->person_id;
+        $sessionWaiterPersonId = session('waiter_person_id');
+        $effectiveWaiterPersonId = $sessionWaiterPersonId ?: $userPersonId;
+
+        $scope = $request->input('scope', 'my'); // 'my' (mis pedidos) | 'all' (todas las mesas de la sucursal)
+        $filter = $request->input('filter', 'all'); // 'all', 'active', 'completed'
+        $search = trim((string) $request->input('search', ''));
+
+        $todayStart = now()->startOfDay();
+        $todayEnd = now()->endOfDay();
+
+        $query = \App\Models\OrderMovement::query()
+            ->with([
+                'table',
+                'area',
+                'movement.user.person',
+                'details' => function ($q) {
+                    $q->whereNull('deleted_at')->orderBy('id');
+                },
+                'details.product',
+                'details.unit'
+            ])
+            ->whereBetween('created_at', [$todayStart, $todayEnd])
+            ->when($branchId, fn($q) => $q->where('branch_id', $branchId));
+
+        if ($scope === 'my') {
+            if ($effectiveWaiterPersonId) {
+                $query->whereHas('movement', function ($mq) use ($effectiveWaiterPersonId, $user) {
+                    $mq->where('person_id', $effectiveWaiterPersonId)
+                       ->when($user?->id, fn($uq) => $uq->orWhere('user_id', $user->id));
+                });
+            } elseif ($user?->id) {
+                $query->whereHas('movement', fn($mq) => $mq->where('user_id', $user->id));
+            }
+        }
+
+        if ($search !== '') {
+            $query->where(function ($sq) use ($search) {
+                $sq->whereHas('table', fn($tq) => $tq->where('number', 'like', "%{$search}%")->orWhere('name', 'like', "%{$search}%"))
+                   ->orWhereHas('area', fn($aq) => $aq->where('name', 'like', "%{$search}%"))
+                   ->orWhereHas('details', fn($dq) => $dq->where('description', 'like', "%{$search}%"));
+            });
+        }
+
+        if ($filter === 'active') {
+            $query->whereIn('status', ['PENDIENTE', 'P', 'EN_PROCESO', 'A', 'OPEN']);
+        } elseif ($filter === 'completed') {
+            $query->whereIn('status', ['FINALIZADO', 'F', 'COBRADO', 'C', 'CLOSED']);
+        }
+
+        $allTodayOrders = \App\Models\OrderMovement::query()
+            ->whereBetween('created_at', [$todayStart, $todayEnd])
+            ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
+            ->get();
+
+        $orders = $query->orderByDesc('created_at')->get();
+
+        $totalOrdersCount = $orders->count();
+        $activeOrdersCount = $orders->filter(fn($o) => in_array((string)($o->status ?? ''), ['PENDIENTE', 'P', 'EN_PROCESO', 'A', 'OPEN'], true))->count();
+        $completedOrdersCount = $orders->filter(fn($o) => in_array((string)($o->status ?? ''), ['FINALIZADO', 'F', 'COBRADO', 'C', 'CLOSED'], true))->count();
+        $totalSalesAmount = (float) $orders->filter(fn($o) => in_array((string)($o->status ?? ''), ['FINALIZADO', 'F', 'COBRADO', 'C', 'CLOSED'], true))->sum('total');
+
+        $waiterName = 'Mozo';
+        if ($sessionWaiterPersonId) {
+            $p = \App\Models\Person::find($sessionWaiterPersonId);
+            if ($p) {
+                $waiterName = trim(($p->first_name ?? '') . ' ' . ($p->last_name ?? ''));
+            }
+        }
+        if ($waiterName === 'Mozo' && $user?->person) {
+            $waiterName = trim(($user->person->first_name ?? '') . ' ' . ($user->person->last_name ?? ''));
+        }
+        if ($waiterName === 'Mozo' && $user?->name) {
+            $waiterName = $user->name;
+        }
+
+        return view('dashboard.mozo', [
+            'orders' => $orders,
+            'totalOrdersCount' => $totalOrdersCount,
+            'activeOrdersCount' => $activeOrdersCount,
+            'completedOrdersCount' => $completedOrdersCount,
+            'totalSalesAmount' => $totalSalesAmount,
+            'scope' => $scope,
+            'filter' => $filter,
+            'search' => $search,
+            'waiterName' => $waiterName,
+            'allVenueOrdersCount' => $allTodayOrders->count(),
+        ]);
     }
 }
