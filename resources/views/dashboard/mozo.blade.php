@@ -258,32 +258,18 @@
                                         </span>
                                     </div>
 
-                                    <div class="grid grid-cols-2 gap-2 mt-1">
+                                    <div class="mt-1">
                                         @if($order->table_id)
                                             <a href="{{ route('orders.create', ['table_id' => $order->table_id]) }}" 
-                                               class="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs text-center transition-all flex items-center justify-center gap-1 shadow-xs">
-                                                <i class="ri-edit-box-line"></i>
+                                               class="w-full px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs text-center transition-all flex items-center justify-center gap-2 shadow-xs">
+                                                <i class="ri-restaurant-2-line text-sm"></i>
                                                 <span>{{ $isOpen ? 'Atender Mesa' : 'Ver Mesa' }}</span>
                                             </a>
                                         @else
                                             <a href="{{ route('orders.create', ['order_id' => $order->id]) }}" 
-                                               class="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs text-center transition-all flex items-center justify-center gap-1 shadow-xs">
-                                                <i class="ri-eye-line"></i>
+                                               class="w-full px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs text-center transition-all flex items-center justify-center gap-2 shadow-xs">
+                                                <i class="ri-eye-line text-sm"></i>
                                                 <span>Ver Detalle</span>
-                                            </a>
-                                        @endif
-
-                                        @if($isOpen && $order->table_id)
-                                            <a href="{{ route('orders.create', ['table_id' => $order->table_id, 'cobro' => 1]) }}" 
-                                               class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs text-center transition-all flex items-center justify-center gap-1 shadow-xs">
-                                                <i class="ri-bank-card-line"></i>
-                                                <span>Cobro</span>
-                                            </a>
-                                        @else
-                                            <a href="{{ route('orders.index') }}" 
-                                               class="px-3 py-2 rounded-xl bg-slate-200 dark:bg-gray-700 hover:bg-slate-300 text-slate-700 dark:text-gray-200 font-bold text-xs text-center transition-all flex items-center justify-center gap-1">
-                                                <i class="ri-restaurant-2-line"></i>
-                                                <span>Mesas</span>
                                             </a>
                                         @endif
                                     </div>
