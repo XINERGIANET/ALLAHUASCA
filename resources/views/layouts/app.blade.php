@@ -25,11 +25,7 @@
                 ->where('bp.branch_id', $branchId)
                 ->whereNull('bp.deleted_at')
                 ->whereNull('p.deleted_at')
-                ->where(function ($q) {
-                    $q->where('p.description', 'like', '%caja%')
-                      ->orWhere('p.description', 'like', '%comprobante%');
-                })
-                ->orderByRaw("CASE WHEN LOWER(p.description) LIKE '%caja%' THEN 1 ELSE 2 END")
+                ->where('p.description', 'Impresora de comprobantes y precuentas')
                 ->value('bp.value');
 
             if ($printerId && is_numeric($printerId)) {

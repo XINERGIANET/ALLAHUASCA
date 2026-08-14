@@ -44,7 +44,26 @@ class CashRegisterController extends Controller
     public function openDrawer(Request $request, PrintBridgeQueue $queue)
     {
         $branchId = (int) (session('branch_id') ?: effective_branch_id());
-        $printerName = trim((string) $request->input('printer_name', 'BARRA2'));
+        $printerName = trim((string) $request->input('printer_name', ''));
+        
+        if (!$printerName && $branchId) {
+            $printerId = DB::table('branch_parameters as bp')
+                ->join('parameters as p', 'p.id', '=', 'bp.parameter_id')
+                ->where('bp.branch_id', $branchId)
+                ->whereNull('bp.deleted_at')
+                ->whereNull('p.deleted_at')
+                ->where('p.description', 'Impresora de comprobantes y precuentas')
+                ->value('bp.value');
+
+            if ($printerId && is_numeric($printerId)) {
+                $printerName = (string) \App\Models\PrinterBranch::where('id', $printerId)->value('name');
+            }
+        }
+
+        if (!$printerName && $branchId) {
+            $printerName = (string) \App\Models\PrinterBranch::where('branch_id', $branchId)->where('status', 'E')->value('name');
+        }
+
         if (!$printerName) {
             $printerName = 'BARRA2';
         }
@@ -56,6 +75,10 @@ class CashRegisterController extends Controller
             $queue->push($branchId, $printerName, $escposPulse, 'caja');
         }
 
-        return response()->json(['success' => true, 'message' => 'Pulso de apertura de caja enviado.']);
+        return response()->json([
+            'success' => true,
+            'printer_name' => $printerName,
+            'message' => "Pulso de apertura enviado a la impresora '{$printerName}'."
+        ]);
     }
 }

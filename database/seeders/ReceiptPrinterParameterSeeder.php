@@ -26,12 +26,7 @@ class ReceiptPrinterParameterSeeder extends Seeder
             ['value' => '', 'parameter_category_id' => $category->id, 'status' => 1]
         );
 
-        $paramCaja = Parameters::query()->updateOrCreate(
-            ['description' => 'Impresora conectada a la caja chica'],
-            ['value' => '', 'parameter_category_id' => $category->id, 'status' => 1]
-        );
-
-        Branch::query()->pluck('id')->each(function ($branchId) use ($parameter, $paramCaja) {
+        Branch::query()->pluck('id')->each(function ($branchId) use ($parameter) {
             $defaultPrinterId = PrinterBranch::query()
                 ->where('branch_id', $branchId)
                 ->where('status', 'E')
@@ -40,11 +35,6 @@ class ReceiptPrinterParameterSeeder extends Seeder
 
             BranchParameter::query()->firstOrCreate(
                 ['branch_id' => (int) $branchId, 'parameter_id' => (int) $parameter->id],
-                ['value' => $defaultPrinterId ? (string) $defaultPrinterId : '']
-            );
-
-            BranchParameter::query()->firstOrCreate(
-                ['branch_id' => (int) $branchId, 'parameter_id' => (int) $paramCaja->id],
                 ['value' => $defaultPrinterId ? (string) $defaultPrinterId : '']
             );
         });

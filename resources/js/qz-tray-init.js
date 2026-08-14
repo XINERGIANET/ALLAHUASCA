@@ -372,69 +372,126 @@ function warmQzConnection() {
  * Envía el pulso ESC/POS para abrir la caja chica / cajón monedero conectado a la ticketera.
  * @param {string} [printerName] Nombre opcional de la impresora
  */
+/**
+ * Envía el pulso ESC/POS para abrir la caja chica / cajón monedero conectado a la ticketera.
+ * @param {string} [printerName] Nombre opcional de la impresora
+ */
 export async function openCashDrawer(printerName) {
+    console.group('[Apertura de Caja Chica]');
+    console.log('[1/4] Iniciando proceso de apertura de cajón monedero...');
+    let targetPrinter = String(printerName || '').trim();
+    const cfg = window.__qzConfig || {};
+
+    if (!targetPrinter) {
+        targetPrinter = String(cfg.cashDrawerPrinterName || '').trim();
+    }
+    if (!targetPrinter) {
+        try {
+            targetPrinter = localStorage.getItem('xinergia_local_printer_name') ||
+                            localStorage.getItem('xinergia_print_bridge_printer') || '';
+        } catch (e) {}
+    }
+    if (!targetPrinter && getQz()?.printers?.getDefault) {
+        try {
+            targetPrinter = await getQz().printers.getDefault();
+        } catch (e) {}
+    }
+    if (!targetPrinter) {
+        targetPrinter = String(cfg.defaultPrinterName || cfg.printerName || 'BARRA2').trim();
+    }
+
+    console.log('[2/4] Impresora de destino resuelta:', targetPrinter);
+
+    let success = false;
+    let detailMessage = '';
+
     try {
         const qzLib = getQz();
-        let targetPrinter = String(printerName || '').trim();
-        if (!targetPrinter) {
-            const cfg = window.__qzConfig || {};
-            targetPrinter = String(cfg.cashDrawerPrinterName || '').trim();
-        }
-        if (!targetPrinter) {
-            try {
-                targetPrinter = localStorage.getItem('xinergia_local_printer_name') ||
-                                localStorage.getItem('xinergia_print_bridge_printer') || '';
-            } catch (e) {}
-        }
-        if (!targetPrinter && qzLib?.printers?.getDefault) {
-            try {
-                targetPrinter = await qzLib.printers.getDefault();
-            } catch (e) {}
-        }
-        if (!targetPrinter) {
-            const cfg = window.__qzConfig || {};
-            targetPrinter = String(cfg.defaultPrinterName || cfg.printerName || 'BARRA2').trim();
-        }
-
         if (qzLib) {
+            console.log('[3/4] Probando conexión local QZ Tray con impresora:', targetPrinter);
             const connected = await connectQzWithCertPairFallback(qzLib, targetPrinter);
             if (connected) {
+                console.log('Conexión QZ Tray exitosa. Creando config y enviando pulso ESC/POS...');
                 const config = qzLib.configs.create(targetPrinter);
-                // Pulse comandos ESC/POS para Pin 2 y Pin 5 (G3AAGRahcAEZGg== en Base64)
+                // Pulso comandos ESC/POS para Pin 2 y Pin 5 (G3AAGRahcAEZGg== en Base64)
                 await qzLib.print(config, [{
                     type: 'raw',
                     format: 'command',
                     flavor: 'base64',
                     data: 'G3AAGRahcAEZGg==',
                 }]);
-                console.info('[QZ Xinergia] Pulso de apertura de caja enviado a la ticketera:', targetPrinter);
-                return true;
+                success = true;
+                detailMessage = `Caja abierta correctamente en la ticketera local "${targetPrinter}".`;
+                console.log('✔ ÉXITO LOCAL:', detailMessage);
+            } else {
+                console.warn('QZ Tray local no se pudo conectar con la impresora. Probando cola PrintBridge backend...');
             }
+        } else {
+            console.warn('QZ Tray no está disponible localmente. Probando cola PrintBridge backend...');
         }
 
-        // Respaldo vía servidor (PrintBridgeQueue) para estaciones sin QZ local
-        const csrfToken = qzCsrfToken();
-        if (csrfToken) {
-            const fd = new FormData();
-            fd.append('printer_name', targetPrinter);
-            const res = await fetch('/caja/abrir-cajon', {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'X-CSRF-TOKEN': csrfToken,
-                    'Accept': 'application/json',
-                },
-                body: fd
-            });
-            if (res.ok) {
-                console.info('[PrintBridge] Solicitud de apertura de caja enviada.');
-                return true;
+        if (!success) {
+            console.log('[3b/4] Enviando solicitud POST /caja/abrir-cajon...');
+            const csrfToken = qzCsrfToken();
+            if (csrfToken) {
+                const fd = new FormData();
+                fd.append('printer_name', targetPrinter);
+                const res = await fetch('/caja/abrir-cajon', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                    },
+                    body: fd
+                });
+                const resData = await res.json().catch(() => ({}));
+                if (res.ok && resData.success) {
+                    success = true;
+                    detailMessage = resData.message || `Solicitud enviada a la cola de impresión para "${targetPrinter}".`;
+                    console.log('✔ ÉXITO SERVIDOR:', detailMessage, resData);
+                } else {
+                    detailMessage = resData.message || resData.error || `HTTP ${res.status}: Error al encolar apertura`;
+                    console.error('✖ ERROR SERVIDOR:', detailMessage, resData);
+                }
+            } else {
+                detailMessage = 'No se encontró el token CSRF para realizar la consulta al servidor.';
+                console.error('✖ ERROR:', detailMessage);
             }
         }
     } catch (err) {
-        console.warn('[QZ Xinergia] No se pudo abrir la caja chica:', err);
+        detailMessage = err?.message || String(err);
+        console.error('✖ EXCEPCIÓN AL ABRIR CAJA CHICA:', err);
+    } finally {
+        console.log('[4/4] Resultado final:', success ? 'ÉXITO' : 'FALLO', detailMessage);
+        console.groupEnd();
     }
-    return false;
+
+    // Feedback visual en pantalla mediante Swal / Toast
+    if (success) {
+        if (window.Swal) {
+            window.Swal.fire({
+                icon: 'success',
+                title: '¡Caja Chica Abierta!',
+                text: detailMessage,
+                timer: 2500,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end'
+            });
+        }
+    } else {
+        if (window.Swal) {
+            window.Swal.fire({
+                icon: 'error',
+                title: 'No se pudo abrir la caja chica',
+                text: detailMessage || 'Revisa la consola del navegador (F12) para ver los detalles.',
+                confirmButtonText: 'Entendido'
+            });
+        }
+    }
+
+    return success;
 }
 
 window.openCashDrawer = openCashDrawer;
