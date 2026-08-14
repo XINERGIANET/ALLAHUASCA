@@ -35,16 +35,16 @@ return [
     
     'pdf' => [
         'enabled' => true,
-        'binary'  => env('SNAPPY_PDF_BINARY', '/usr/local/bin/wkhtmltopdf'),
+        'binary'  => env('SNAPPY_PDF_BINARY', base_path('vendor/h4cc/wkhtmltopdf-amd64/bin/wkhtmltopdf-amd64')),
         'timeout' => false,
         'options' => [],
         'env'     => [],
     ],
-    
+
     'image' => [
         'enabled' => true,
         'binary'  => env('SNAPPY_IMAGE_BINARY', '/usr/local/bin/wkhtmltoimage'),
-        'timeout' => false, 
+        'timeout' => false,
         'options' => [],
         'env'     => [],
     ],

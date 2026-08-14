@@ -5,7 +5,7 @@
     <title>Cierre de caja - {{ $shift->cashMovementEnd?->movement?->number ?? 'Turno' }}</title>
     <style>
         * { box-sizing: border-box; }
-        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 12px; margin: 0; padding: 16px; color: #111827; }
+        body { font-family: "Segoe UI", Arial, sans-serif; font-size: 12px; margin: 0; padding: 16px; color: #111827; }
         h1 { font-size: 25px; margin: 0 0 8px; text-align: center; }
         h2 { font-size: 20px; margin: 16px 0 8px; }
         table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 14px; }
