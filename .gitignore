@@ -19,7 +19,7 @@ pnpm-debug.log*
 
 # Vite / Mix build
 /public/build/
-/public/hot/
+/public/hot
 
 # Storage (symlink)
 /public/storage
