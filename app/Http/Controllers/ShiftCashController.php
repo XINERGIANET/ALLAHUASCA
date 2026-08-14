@@ -109,14 +109,7 @@ class ShiftCashController extends Controller
                 'cashMovementStart.movement.movementType',
                 'cashMovementEnd.movement.documentType',
                 'cashMovementEnd.movement.movementType',
-                'branch',                
-                'movements.paymentConcept',
-                'movements.details.paymentMethod',
-                'movements.movement.salesMovement',
-                'movements.movement.warehouseMovement',
-                'movements.movement.orderMovement' => function ($query) {
-                    $query->where('status', 'FINALIZADO');
-                }
+                'branch',
             ])
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->whereHas('cashMovementStart', function($q) use ($selectedBoxId) {

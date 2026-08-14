@@ -132,37 +132,56 @@
                     
                     @forelse ($shift_cash as $shift)
                         @php
-                            $ingresosTotal = 0;
-                            $egresosTotal = 0;
-                            $desgloseIngresos = [];
-                            $desgloseEgresos = [];
+                            $startCm = $shift->cashMovementStart;
+                            $endCm = $shift->cashMovementEnd;
+                            $regId = $startCm?->cash_register_id;
+                            $from = $startCm?->created_at ?? $shift->started_at;
+                            $to = $endCm?->created_at ?? $shift->ended_at ?? now();
 
-                            if($shift->movements) {
-                                foreach($shift->movements as $mov) {
-                                    if($mov->id == $shift->cash_movement_start_id || $mov->id == $shift->cash_movement_end_id) {
-                                        continue; 
+                            $shiftMovements = ($regId && $from)
+                                ? \App\Models\CashMovements::query()
+                                    ->with(['paymentConcept', 'details.paymentMethod'])
+                                    ->whereNotIn('id', array_values(array_filter([$shift->cash_movement_end_id])))
+                                    ->where('cash_register_id', $regId)
+                                    ->whereBetween('created_at', [
+                                        \Carbon\Carbon::parse($from)->startOfSecond(),
+                                        \Carbon\Carbon::parse($to)->endOfSecond(),
+                                    ])
+                                    ->orderBy('id')
+                                    ->get()
+                                : collect();
+
+                            $conceptGroups = [];
+                            foreach ($shiftMovements as $mov) {
+                                $conceptName = $mov->paymentConcept?->description ?? 'Otros';
+                                $conceptType = $mov->paymentConcept?->type ?? 'I';
+
+                                if (!isset($conceptGroups[$conceptName])) {
+                                    $conceptGroups[$conceptName] = [
+                                        'type' => $conceptType,
+                                        'methods' => [],
+                                    ];
+                                }
+
+                                if ($mov->details && $mov->details->count() > 0) {
+                                    foreach ($mov->details as $detail) {
+                                        $metodo = $detail->payment_method ?: ($detail->paymentMethod?->description ?? 'Otros');
+                                        $monto = (float) $detail->amount;
+                                        $conceptGroups[$conceptName]['methods'][$metodo] = ($conceptGroups[$conceptName]['methods'][$metodo] ?? 0) + $monto;
                                     }
-
-                                    if ($mov->paymentConcept && $mov->details) {
-                                        $tipo = $mov->paymentConcept->type; 
-                                        foreach($mov->details as $detail) {
-                                            $metodo = $detail->paymentMethod->name ?? ($detail->payment_method ?? 'Otros');
-                                            $monto = $detail->amount;
-
-                                            if ($tipo == 'I') {
-                                                $ingresosTotal += $monto;
-                                                if (!isset($desgloseIngresos[$metodo])) $desgloseIngresos[$metodo] = 0;
-                                                $desgloseIngresos[$metodo] += $monto;
-                                            } elseif ($tipo == 'E') {
-                                                $egresosTotal += $monto;
-                                                if (!isset($desgloseEgresos[$metodo])) $desgloseEgresos[$metodo] = 0;
-                                                $desgloseEgresos[$metodo] += $monto;
-                                            }
-                                        }
-                                    }
+                                } elseif ((float) $mov->total > 0) {
+                                    $metodo = 'Efectivo';
+                                    $conceptGroups[$conceptName]['methods'][$metodo] = ($conceptGroups[$conceptName]['methods'][$metodo] ?? 0) + (float) $mov->total;
                                 }
                             }
-                            $neto = $ingresosTotal - $egresosTotal;
+
+                            $getConceptIcon = function ($name, $type) {
+                                $nameLower = mb_strtolower($name);
+                                if (str_contains($nameLower, 'apertura')) return '📻';
+                                if (str_contains($nameLower, 'pago de cliente') || str_contains($nameLower, 'venta')) return '🛒';
+                                if ($type === 'E' || str_contains($nameLower, 'egreso') || str_contains($nameLower, 'gasto')) return '⬇️';
+                                return '⬆️';
+                            };
                         @endphp
 
                         <tbody x-data="{ expanded: false }" class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -207,52 +226,32 @@
 
                                 {{-- 3. DETALLE (INGRESOS/EGRESOS) --}}
                                 <td class="px-5 py-4">
-                                    <div class="flex flex-col gap-2 w-64 text-xs">
-                                        @if($ingresosTotal > 0)
-                                            <div>
-                                                <div class="flex justify-between font-bold text-emerald-600 mb-1 border-b border-emerald-100 pb-0.5">
-                                                    <span><i class="ri-arrow-up-line"></i> Ingresos:</span>
-                                                    <span>$ {{ number_format($ingresosTotal, 2) }}</span>
+                                    @if(count($conceptGroups) > 0)
+                                        <div class="flex flex-col gap-2.5 w-64 text-xs">
+                                            @foreach($conceptGroups as $cName => $cData)
+                                                @php
+                                                    $icon = $getConceptIcon($cName, $cData['type']);
+                                                    $isEgreso = ($cData['type'] === 'E' || str_contains(mb_strtolower($cName), 'egreso'));
+                                                @endphp
+                                                <div>
+                                                    <div class="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1">
+                                                        <span>{{ $icon }}</span>
+                                                        <span>{{ $cName }}:</span>
+                                                    </div>
+                                                    <div class="pl-4 space-y-0.5 text-gray-600 dark:text-gray-300">
+                                                        @foreach($cData['methods'] as $mName => $mAmount)
+                                                            <div>
+                                                                <span>{{ $mName }}:</span>
+                                                                <span>{{ $isEgreso ? '-' : '' }}{{ number_format($mAmount, 2) }}</span>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
                                                 </div>
-                                                <div class="pl-2 space-y-0.5">
-                                                    @foreach($desgloseIngresos as $metodo => $monto)
-                                                        <div class="flex justify-between text-gray-500 dark:text-gray-400">
-                                                            <span>{{ $metodo }}:</span>
-                                                            <span>{{ number_format($monto, 2) }}</span>
-                                                        </div>
-                                                    @endforeach
-                                                </div>
-                                            </div>
-                                        @endif
-
-                                        @if($egresosTotal > 0)
-                                            <div>
-                                                <div class="flex justify-between font-bold text-red-500 mb-1 border-b border-red-100 pb-0.5">
-                                                    <span><i class="ri-arrow-down-line"></i> Egresos:</span>
-                                                    <span>$ {{ number_format($egresosTotal, 2) }}</span>
-                                                </div>
-                                                <div class="pl-2 space-y-0.5">
-                                                    @foreach($desgloseEgresos as $metodo => $monto)
-                                                        <div class="flex justify-between text-gray-500 dark:text-gray-400">
-                                                            <span>{{ $metodo }}:</span>
-                                                            <span>{{ number_format($monto, 2) }}</span>
-                                                        </div>
-                                                    @endforeach
-                                                </div>
-                                            </div>
-                                        @endif
-
-                                        @if($ingresosTotal == 0 && $egresosTotal == 0)
-                                            <span class="text-gray-400 italic">Sin movimientos operativos</span>
-                                        @else
-                                            <div class="border-t border-dashed border-gray-300 pt-1 mt-1">
-                                                <div class="flex justify-between font-bold text-gray-700 dark:text-gray-200">
-                                                    <span>Balance:</span>
-                                                    <span class="{{ $neto >= 0 ? 'text-emerald-600' : 'text-red-500' }}">$ {{ number_format($neto, 2) }}</span>
-                                                </div>
-                                            </div>
-                                        @endif
-                                    </div>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <span class="text-xs text-gray-400 italic">Sin movimientos operativos</span>
+                                    @endif
                                 </td>
 
                                 {{-- 4. N° CIERRE --}}
