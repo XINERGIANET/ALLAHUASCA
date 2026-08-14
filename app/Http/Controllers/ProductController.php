@@ -136,12 +136,18 @@ class ProductController extends Controller
         ])
         ->values();
 
-        $maxProd = Product::where('code', 'like', 'CH_%')
+        $maxProd = Product::where(function ($q) {
+                $q->where('code', 'like', 'ALL_%')
+                  ->orWhere('code', 'like', 'CH_%');
+            })
             ->when($branchId, fn($q) => $q->whereHas('productBranches', fn($b) => $b->where('branch_id', $branchId)))
             ->pluck('code')
-            ->map(fn($code) => (int) substr($code, 3))
+            ->map(function ($code) {
+                $parts = explode('_', $code);
+                return isset($parts[1]) && is_numeric($parts[1]) ? (int) $parts[1] : 0;
+            })
             ->max() ?? 0;
-        $nextProdCode = 'CH_' . str_pad($maxProd + 1, 3, '0', STR_PAD_LEFT);
+        $nextProdCode = 'ALL_' . str_pad($maxProd + 1, 3, '0', STR_PAD_LEFT);
 
         $maxIngr = Product::where('code', 'like', 'IN_%')
             ->when($branchId, fn($q) => $q->whereHas('productBranches', fn($b) => $b->where('branch_id', $branchId)))
