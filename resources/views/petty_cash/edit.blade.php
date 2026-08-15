@@ -163,10 +163,9 @@
                                         @change="row.methodName = $event.target.options[$event.target.selectedIndex].text"
                                         required class="w-full h-11 rounded-lg border-gray-200 dark:bg-dark-900 dark:text-white/90">
                                         <option value="">Seleccionar...</option>
-                                        <option value="1">Efectivo</option>
-                                        <option value="2">Tarjeta</option>
-                                        <option value="5">Billetera Digital</option>
-                                        <option value="3">Transferencia</option>
+                                        @foreach($paymentMethods as $pm)
+                                            <option value="{{ $pm->id }}">{{ $pm->description }}</option>
+                                        @endforeach
                                     </select>
                                     <input type="hidden" :name="`payments[${index}][payment_method]`" x-model="row.methodName">
                                 </div>

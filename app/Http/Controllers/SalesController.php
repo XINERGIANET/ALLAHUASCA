@@ -1552,9 +1552,13 @@ class SalesController extends Controller
     {
         $branchId = session('branch_id');
         $sales = Movement::onlyTrashed()
-            ->select('movements.*')
-            ->join('sales_movements', 'sales_movements.movement_id', '=', 'movements.id')
-            ->with(['documentType', 'deletedByUser', 'salesMovement'])
+            ->select(
+                'movements.*',
+                'sales_movements.total as sales_total',
+                'sales_movements.series as sales_series'
+            )
+            ->leftJoin('sales_movements', 'sales_movements.movement_id', '=', 'movements.id')
+            ->with(['documentType', 'deletedByUser'])
             ->where('movements.movement_type_id', 2)
             ->when($branchId, fn ($q) => $q->where('movements.branch_id', $branchId))
             ->orderByDesc('movements.deleted_at')
@@ -1563,15 +1567,15 @@ class SalesController extends Controller
         $formatted = $sales->map(function ($s) {
             $displayNumber = trim((string) ($s->electronic_invoice_number ?? ''));
             if ($displayNumber === '') {
-                $displayNumber = strtoupper(substr($s->documentType?->name ?? 'T', 0, 1)) . ($s->salesMovement?->series ?? '') . '-' . $s->number;
+                $displayNumber = strtoupper(substr($s->documentType?->name ?? 'T', 0, 1)) . ($s->sales_series ?? '') . '-' . $s->number;
             }
 
             return [
                 'id' => $s->id,
                 'number' => $displayNumber,
                 'document_type' => $s->documentType?->name ?? 'Ticket',
-                'total' => (float) ($s->salesMovement?->total ?? 0),
-                'deleted_by' => $s->deleted_by_user_name ?: ($s->deletedByUser?->name ?: 'Sistema'),
+                'total' => (float) ($s->sales_total ?? 0),
+                'deleted_by' => $s->deleted_by_user_name ?: ($s->deletedByUser?->name ?: '—'),
                 'deleted_at' => $s->deleted_at ? $s->deleted_at->format('d/m/Y H:i:s') : '—',
                 'client' => $s->person_name ?? 'Público General',
             ];
@@ -1592,6 +1596,12 @@ class SalesController extends Controller
             $sale->deleted_by_user_id = null;
             $sale->deleted_by_user_name = null;
             $sale->save();
+
+            // Restablecer el SalesMovement si fue soft-deletado
+            $salesMovement = SalesMovement::onlyTrashed()->where('movement_id', $sale->id)->first();
+            if ($salesMovement) {
+                $salesMovement->restore();
+            }
 
             app(KardexSyncService::class)->syncMovement($sale);
 

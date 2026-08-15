@@ -775,6 +775,13 @@ class PettyCashController extends Controller
         $digitalWallets = DigitalWallet::where('status', true)->orderBy('order_num', 'asc')->get();
         $paymentGateways = PaymentGateways::where('status', true)->orderBy('order_num', 'asc')->get();
 
+        $branchId = session('branch_id');
+        $paymentMethods = PaymentMethod::query()
+            ->where('status', true)
+            ->restrictedToBranch($branchId ? (int) $branchId : null)
+            ->orderBy('order_num', 'asc')
+            ->get();
+
         $viewId = $request->input('view_id');
 
         return view('petty_cash.edit', compact(
@@ -787,6 +794,7 @@ class PettyCashController extends Controller
             'banks',
             'digitalWallets',
             'paymentGateways',
+            'paymentMethods',
             'viewId'
         ));
     }
