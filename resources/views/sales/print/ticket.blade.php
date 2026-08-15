@@ -345,6 +345,35 @@
             line-height: 3mm;
         }
 
+        /* ── Estilos de descuento ── */
+        .item-discount td {
+            padding-top: 0;
+            padding-bottom: 0.5mm;
+            font-size: 2.6mm;
+            color: #b91c1c;
+            font-style: italic;
+        }
+
+        .item-discount .discount-text {
+            display: inline;
+        }
+
+        .totals-discount td {
+            color: #b91c1c;
+        }
+
+        body.ticket-paper-58 .item-discount td {
+            font-size: 2.25mm;
+        }
+
+        body.thermal-print .item-discount td {
+            font-size: 2.9mm;
+        }
+
+        body.ticket-paper-58.thermal-print .item-discount td {
+            font-size: 2.5mm;
+        }
+
         body.thermal-print .company,
         body.thermal-print .subhead,
         body.thermal-print .doc-code,
@@ -474,6 +503,27 @@
     if ($customerDocument === '' || $customerDocument === '-') {
         $customerDocument = '0';
     }
+
+    // ── Descuentos ──
+    $ticketTotalDiscount = 0;
+    $ticketHasDiscounts = false;
+    foreach ($details as $d) {
+        $dPct = (float) ($d->discount_percentage ?? 0);
+        $dOrig = $d->original_amount !== null ? (float) $d->original_amount : null;
+        $dAmt = (float) ($d->amount ?? 0);
+        if ($dOrig !== null && $dOrig > $dAmt + 0.009) {
+            $ticketTotalDiscount += round($dOrig - $dAmt, 2);
+            $ticketHasDiscounts = true;
+        } elseif ($dPct > 0.009) {
+            $denom = 1 - ($dPct / 100);
+            if ($denom > 0.0001) {
+                $origCalc = $dAmt / $denom;
+                $ticketTotalDiscount += round(max(0, $origCalc - $dAmt), 2);
+                $ticketHasDiscounts = true;
+            }
+        }
+    }
+    $ticketTotalDiscount = round($ticketTotalDiscount, 2);
 @endphp
 
 <div class="ticket">
@@ -549,6 +599,26 @@
                 $qty = (float) $detail->quantity;
                 $lineTotal = (float) $detail->amount;
                 $unitPrice = $qty > 0 ? ($lineTotal / $qty) : 0;
+                // Descuento de esta línea
+                $lineDctoPct = (float) ($detail->discount_percentage ?? 0);
+                $lineOrigAmt = $detail->original_amount !== null ? (float) $detail->original_amount : null;
+                $lineDiscAmt = 0;
+                $lineHasDisc = false;
+                if ($lineOrigAmt !== null && $lineOrigAmt > $lineTotal + 0.009) {
+                    $lineDiscAmt = round($lineOrigAmt - $lineTotal, 2);
+                    $lineHasDisc = true;
+                } elseif ($lineDctoPct > 0.009) {
+                    $denom = 1 - ($lineDctoPct / 100);
+                    if ($denom > 0.0001) {
+                        $origCalc = $lineTotal / $denom;
+                        $lineDiscAmt = round(max(0, $origCalc - $lineTotal), 2);
+                        $lineHasDisc = true;
+                    }
+                }
+                // Precio original unitario (antes del descuento)
+                $lineOrigUnitPrice = $lineHasDisc && $qty > 0
+                    ? (($lineTotal + $lineDiscAmt) / $qty)
+                    : $unitPrice;
             @endphp
             <tr class="item-description">
                 <td colspan="{{ $showUnitColumn ? 5 : 4 }}">{{ $detail->description ?? $detail->product?->description ?? '-' }}</td>
@@ -562,6 +632,17 @@
                 <td class="col-unit">{{ number_format($unitPrice, 2) }}</td>
                 <td class="col-subtotal">{{ number_format($lineTotal, 2) }}</td>
             </tr>
+            @if($lineHasDisc)
+            <tr class="item-discount">
+                <td colspan="{{ $showUnitColumn ? 5 : 4 }}">
+                    <span class="discount-text">
+                        Dcto. {{ number_format($lineDctoPct, 1) }}%
+                        (P.Orig: {{ number_format($lineOrigUnitPrice, 2) }})
+                        &minus;S/ {{ number_format($lineDiscAmt, 2) }}
+                    </span>
+                </td>
+            </tr>
+            @endif
         @endforeach
             <tr class="dash-row"><td colspan="{{ $showUnitColumn ? 5 : 4 }}">------------------------------------------------------------</td></tr>
         </tbody>
@@ -570,6 +651,12 @@
     <div class="separator"></div>
 
     <table class="totals-table">
+        @if($ticketHasDiscounts)
+        <tr class="totals-discount">
+            <td class="totals-label">Descuento total:</td>
+            <td class="totals-value">&minus;S/ {{ number_format($ticketTotalDiscount, 2) }}</td>
+        </tr>
+        @endif
         <tr>
             <td class="totals-label">Op. gravada:</td>
             <td class="totals-value">S/ {{ number_format($ticketSubtotal, 2) }}</td>

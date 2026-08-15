@@ -3269,6 +3269,27 @@ class SalesController extends Controller
             .$this->thermalPadStart('Subt.', $colAmount);
         $lines[] = $sep;
 
+        // ── Calcular descuento total para la sección de totales ──
+        $thermalTotalDiscount = 0.0;
+        $thermalHasDiscounts = false;
+        foreach ($details as $d) {
+            $dPct = (float) ($d->discount_percentage ?? 0);
+            $dOrig = $d->original_amount !== null ? (float) $d->original_amount : null;
+            $dAmt = (float) ($d->amount ?? 0);
+            if ($dOrig !== null && $dOrig > $dAmt + 0.009) {
+                $thermalTotalDiscount += round($dOrig - $dAmt, 2);
+                $thermalHasDiscounts = true;
+            } elseif ($dPct > 0.009) {
+                $denom = 1 - ($dPct / 100);
+                if ($denom > 0.0001) {
+                    $origCalc = $dAmt / $denom;
+                    $thermalTotalDiscount += round(max(0, $origCalc - $dAmt), 2);
+                    $thermalHasDiscounts = true;
+                }
+            }
+        }
+        $thermalTotalDiscount = round($thermalTotalDiscount, 2);
+
         $detailCount = $details->count();
         foreach ($details as $index => $detail) {
             $qty = (float) $detail->quantity;
@@ -3276,6 +3297,23 @@ class SalesController extends Controller
             $unitPrice = $qty > 0 ? ($lineTotal / $qty) : 0.0;
             $descLines = $wrapText((string) ($detail->description ?? $detail->product?->description ?? '-'), $colName);
             $measure = Str::ascii((string) ($detail->unit?->description ?: '-'));
+
+            // Descuento de esta línea
+            $lineDctoPct = (float) ($detail->discount_percentage ?? 0);
+            $lineOrigAmt = $detail->original_amount !== null ? (float) $detail->original_amount : null;
+            $lineDiscAmt = 0.0;
+            $lineHasDisc = false;
+            if ($lineOrigAmt !== null && $lineOrigAmt > $lineTotal + 0.009) {
+                $lineDiscAmt = round($lineOrigAmt - $lineTotal, 2);
+                $lineHasDisc = true;
+            } elseif ($lineDctoPct > 0.009) {
+                $denom = 1 - ($lineDctoPct / 100);
+                if ($denom > 0.0001) {
+                    $origCalc = $lineTotal / $denom;
+                    $lineDiscAmt = round(max(0, $origCalc - $lineTotal), 2);
+                    $lineHasDisc = true;
+                }
+            }
 
             $lines[] = $this->thermalPadEnd($formatQty($qty), $colQty)
                 .str_repeat(' ', $colGap)
@@ -3293,12 +3331,28 @@ class SalesController extends Controller
                     .$this->thermalPadStart('', $colAmount);
             }
 
+            // Mostrar línea de descuento si aplica
+            if ($lineHasDisc) {
+                $origUnit = $qty > 0 ? (($lineTotal + $lineDiscAmt) / $qty) : 0;
+                $discText = '  Dcto. '.number_format($lineDctoPct, 1, '.', '').'%'
+                    .' (P.Orig: '.number_format($origUnit, 2, '.', '').')'
+                    .' -'.number_format($lineDiscAmt, 2, '.', '');
+                if (strlen($discText) > $lineWidth) {
+                    $discText = substr($discText, 0, $lineWidth);
+                }
+                $lines[] = $discText;
+            }
+
             if ($index < ($detailCount - 1)) {
                 $lines[] = $sep;
             }
         }
 
         $lines[] = $sep;
+        if ($thermalHasDiscounts) {
+            $lines[] = $this->thermalPadEnd('Descuento', $lineWidth - 12)
+                .$this->thermalPadStart('-'.number_format($thermalTotalDiscount, 2, '.', ''), 12);
+        }
         $lines[] = $this->thermalPadEnd('Subtotal', $lineWidth - 12)
             .$this->thermalPadStart(number_format($docSubtotal, 2, '.', ''), 12);
         $lines[] = $this->thermalPadEnd('IGV', $lineWidth - 12)
