@@ -143,6 +143,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/admin/ventas/pdf/{sale}', [SalesController::class, 'printPdf'])->name('admin.sales.print.pdf');
     Route::get('/admin/ventas/ticket/{sale}', [SalesController::class, 'printTicket'])->name('admin.sales.print.ticket');
     Route::get('/admin/ventas/consultar-documento', [SalesController::class, 'lookupFiscalDocument'])->name('sales.lookup.document');
+    Route::get('/admin/ventas/eliminadas-listado', [SalesController::class, 'getDeletedSales'])->name('sales.deleted');
+    Route::post('/admin/ventas/{id}/restore', [SalesController::class, 'restoreSale'])->name('sales.restore');
     Route::get('/admin/ventas/{sale}/electronico/pdf-a4', [SalesController::class, 'redirectElectronicPdfA4'])->name('sales.electronic.pdf.a4');
     Route::get('/admin/ventas/{sale}/electronico/xml', [SalesController::class, 'redirectElectronicXml'])->name('sales.electronic.xml');
     Route::get('/admin/ventas/{sale}/electronico/cdr', [SalesController::class, 'redirectElectronicCdr'])->name('sales.electronic.cdr');

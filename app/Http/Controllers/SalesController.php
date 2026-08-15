@@ -152,14 +152,10 @@ class SalesController extends Controller
             }
         }
 
-        $showDeleted = $request->boolean('show_deleted');
-        $query = Movement::query();
-        if ($showDeleted) {
-            $query->onlyTrashed();
-        }
-        $query->select('movements.*')
+        $query = Movement::query()
+            ->select('movements.*')
             ->join('sales_movements', 'sales_movements.movement_id', '=', 'movements.id')
-            ->with(['branch', 'person', 'responsibleUser.person', 'movementType', 'documentType', 'salesMovement.details', 'orderMovement.table', 'movement.orderMovement.table', 'deletedByUser'])
+            ->with(['branch', 'person', 'responsibleUser.person', 'movementType', 'documentType', 'salesMovement.details', 'orderMovement.table', 'movement.orderMovement.table'])
             ->where('movements.movement_type_id', 2)
             ->when($branchId, fn ($q) => $q->where('movements.branch_id', $branchId))
             ->when(! $branchId, fn ($q) => $q->whereRaw('1 = 0'));
@@ -335,7 +331,6 @@ class SalesController extends Controller
             'thermalPrinters' => $thermalPrintersIndex,
             'thermalPrintEnabled' => (bool) config('local_network.thermal_print_enabled', true),
             'unresolvedPrintJobs' => $unresolvedPrintJobs,
-            'showDeleted' => $showDeleted,
         ];
 
         return view('sales.index', $viewData);
@@ -1551,6 +1546,90 @@ class SalesController extends Controller
         return redirect()
             ->route('sales.index', request()->filled('view_id') ? ['view_id' => request()->input('view_id')] : [])
             ->with('status', 'Venta eliminada correctamente.');
+    }
+
+    public function getDeletedSales(Request $request)
+    {
+        $branchId = session('branch_id');
+        $sales = Movement::onlyTrashed()
+            ->select('movements.*')
+            ->join('sales_movements', 'sales_movements.movement_id', '=', 'movements.id')
+            ->with(['documentType', 'deletedByUser', 'salesMovement'])
+            ->where('movements.movement_type_id', 2)
+            ->when($branchId, fn ($q) => $q->where('movements.branch_id', $branchId))
+            ->orderByDesc('movements.deleted_at')
+            ->get();
+
+        $formatted = $sales->map(function ($s) {
+            $displayNumber = trim((string) ($s->electronic_invoice_number ?? ''));
+            if ($displayNumber === '') {
+                $displayNumber = strtoupper(substr($s->documentType?->name ?? 'T', 0, 1)) . ($s->salesMovement?->series ?? '') . '-' . $s->number;
+            }
+
+            return [
+                'id' => $s->id,
+                'number' => $displayNumber,
+                'document_type' => $s->documentType?->name ?? 'Ticket',
+                'total' => (float) ($s->salesMovement?->total ?? 0),
+                'deleted_by' => $s->deleted_by_user_name ?: ($s->deletedByUser?->name ?: 'Sistema'),
+                'deleted_at' => $s->deleted_at ? $s->deleted_at->format('d/m/Y H:i:s') : '—',
+                'client' => $s->person_name ?? 'Público General',
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $formatted,
+        ]);
+    }
+
+    public function restoreSale($id)
+    {
+        $sale = Movement::onlyTrashed()->findOrFail($id);
+
+        DB::transaction(function () use ($sale) {
+            $sale->restore();
+            $sale->deleted_by_user_id = null;
+            $sale->deleted_by_user_name = null;
+            $sale->save();
+
+            app(KardexSyncService::class)->syncMovement($sale);
+
+            $sale->loadMissing(['orderMovement.table', 'movement.orderMovement.table']);
+            $linkedOrderMovement = null;
+            if ($sale->orderMovement) {
+                $linkedOrderMovement = $sale->orderMovement;
+            } elseif ($sale->movement?->orderMovement) {
+                $linkedOrderMovement = $sale->movement->orderMovement;
+            }
+
+            if ($linkedOrderMovement) {
+                $linkedOrderMovement->status = 'PAGADO';
+                $linkedOrderMovement->finished_at = now();
+                $linkedOrderMovement->save();
+
+                $orderBaseMovement = $linkedOrderMovement->movement;
+                if ($orderBaseMovement) {
+                    $orderBaseMovement->status = 'A';
+                    $orderBaseMovement->save();
+                }
+
+                $tableId = $linkedOrderMovement->table_id;
+                if ($tableId) {
+                    if (! $this->tableHasAnotherPendingOrder($tableId, $linkedOrderMovement->id)) {
+                        Table::where('id', $tableId)->update([
+                            'situation' => 'libre',
+                            'opened_at' => null,
+                        ]);
+                    }
+                }
+            }
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Venta restaurada correctamente.',
+        ]);
     }
 
     private function resolveLinkedOrderMovementForSale(Movement $sale): ?OrderMovement
