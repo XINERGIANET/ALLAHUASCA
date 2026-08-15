@@ -70,10 +70,20 @@
     {{-- ========================================================= --}}
 
     <div x-data="{
-        rows: [{ id: 1, methodId: '1', methodName: 'Efectivo', amount: '' }],
+        rows: [{ 
+            id: 1, 
+            methodId: '{{ $paymentMethods->first()->id ?? 1 }}', 
+            methodName: '{{ $paymentMethods->first()->description ?? 'Efectivo' }}', 
+            amount: '' 
+        }],
 
         addNewRow() {
-            this.rows.push({ id: Date.now(), methodId: '1', methodName: 'Efectivo', amount: '' });
+            this.rows.push({ 
+                id: Date.now(), 
+                methodId: '{{ $paymentMethods->first()->id ?? 1 }}', 
+                methodName: '{{ $paymentMethods->first()->description ?? 'Efectivo' }}', 
+                amount: '' 
+            });
         },
 
         removeRow(index) {
@@ -88,10 +98,20 @@
     }"
     @fill-apertura-amount.window="
         const amount = Number($event.detail?.amount || 0).toFixed(2);
-        rows = [{ id: Date.now(), methodId: '1', methodName: 'Efectivo', amount: amount }];
+        rows = [{ 
+            id: Date.now(), 
+            methodId: '{{ $paymentMethods->first()->id ?? 1 }}', 
+            methodName: '{{ $paymentMethods->first()->description ?? 'Efectivo' }}', 
+            amount: amount 
+        }];
     "
     @reset-payment-rows.window="
-        rows = [{ id: Date.now(), methodId: '1', methodName: 'Efectivo', amount: '' }];
+        rows = [{ 
+            id: Date.now(), 
+            methodId: '{{ $paymentMethods->first()->id ?? 1 }}', 
+            methodName: '{{ $paymentMethods->first()->description ?? 'Efectivo' }}', 
+            amount: '' 
+        }];
     ">
 
         {{-- HEADER DE PAGOS Y TOTAL --}}
@@ -215,10 +235,9 @@
                                         :name="`payments[${index}][payment_method_id]`" required 
                                         class="h-11 w-full rounded-lg border-gray-200 bg-white pl-10 pr-8 text-sm text-gray-800 focus:border-[#111827] focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-dark-900 dark:text-white/90 appearance-none transition-all font-medium">
                                         <option value="">Seleccionar...</option>
-                                        <option value="1">Efectivo</option>
-                                        <option value="2">Tarjeta de Crédito/Débito</option>
-                                        <option value="5">Billetera Digital</option>
-                                        <option value="3">Transferencia Bancaria</option>
+                                        @foreach($paymentMethods as $pm)
+                                            <option value="{{ $pm->id }}">{{ $pm->description }}</option>
+                                        @endforeach
                                     </select>
 
                                     <i
