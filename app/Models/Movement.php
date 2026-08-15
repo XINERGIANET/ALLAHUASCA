@@ -36,6 +36,8 @@ class Movement extends Model
         'electronic_invoice_xml_url',
         'electronic_invoice_cdr_url',
         'electronic_invoice_response',
+        'deleted_by_user_id',
+        'deleted_by_user_name',
     ];
 
     protected $casts = [
@@ -61,6 +63,11 @@ class Movement extends Model
     public function responsibleUser()
     {
         return $this->belongsTo(User::class, 'responsible_id');
+    }
+
+    public function deletedByUser()
+    {
+        return $this->belongsTo(User::class, 'deleted_by_user_id');
     }
 
     public function movementType()

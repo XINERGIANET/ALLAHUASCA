@@ -201,6 +201,7 @@
                     @if ($viewId)
                         <input type="hidden" name="view_id" value="{{ $viewId }}">
                     @endif
+                    <input type="hidden" name="show_deleted" value="{{ $showDeleted ? '1' : '0' }}">
 
                     <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                         <div class="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center flex-wrap">
@@ -214,19 +215,34 @@
                                 <input type="text" name="search" value="{{ $search }}" placeholder="Buscar..."
                                     class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 pl-12 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
                             </div>
-                            <div class="flex gap-2 w-full sm:w-auto">
+                            <div class="flex gap-2 w-full sm:w-auto flex-wrap">
                                 <x-ui.button size="md" variant="primary" type="submit"
                                     class="h-11 w-full sm:w-auto px-6 shadow-sm hover:shadow-md transition-all duration-200 active:scale-95"
                                     style="background-color: #09090b; border-color: #09090b;">
                                     <i class="ri-search-line text-gray-100"></i>
-                                    <span class="font-medium text-gray-100 hidden sm:inline">Buscar</span>
+                                    <span class="font-medium text-gray-100">Buscar</span>
                                 </x-ui.button>
                                 <x-ui.link-button size="md" variant="outline"
                                     href="{{ route('sales.index', $viewId ? ['view_id' => $viewId] : []) }}"
                                     class="h-11 w-full sm:w-auto px-6 border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all duration-200">
                                     <i class="ri-refresh-line"></i>
-                                    <span class="font-medium hidden sm:inline">Limpiar</span>
+                                    <span class="font-medium">Limpiar</span>
                                 </x-ui.link-button>
+                                @if($showDeleted)
+                                    <x-ui.link-button size="md" variant="outline"
+                                        href="{{ route('sales.index', array_merge(request()->except('show_deleted'), $viewId ? ['view_id' => $viewId, 'show_deleted' => '0'] : ['show_deleted' => '0'])) }}"
+                                        class="h-11 w-full sm:w-auto px-6 border-emerald-200 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 hover:text-emerald-950 transition-all duration-200">
+                                        <i class="ri-checkbox-circle-line"></i>
+                                        <span class="font-medium">Ver Activas</span>
+                                    </x-ui.link-button>
+                                @else
+                                    <x-ui.link-button size="md" variant="outline"
+                                        href="{{ route('sales.index', array_merge(request()->except('show_deleted'), $viewId ? ['view_id' => $viewId, 'show_deleted' => '1'] : ['show_deleted' => '1'])) }}"
+                                        class="h-11 w-full sm:w-auto px-6 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200">
+                                        <i class="ri-delete-bin-line"></i>
+                                        <span class="font-medium">Ver Eliminadas</span>
+                                    </x-ui.link-button>
+                                @endif
                             </div>
                         </div>
 
@@ -411,12 +427,21 @@
                             <th class="px-5 py-3 text-left sm:px-6">
                                 <p class="font-semibold text-white text-theme-xs uppercase">Persona</p>
                             </th>
-                            <th class="px-5 py-3 text-left sm:px-6">
-                                <p class="font-semibold text-white text-theme-xs uppercase">Situación</p>
-                            </th>
-                            <th class="px-5 py-3 text-center sm:px-6 last:rounded-tr-xl">
-                                <p class="font-semibold text-white text-theme-xs uppercase">Acciones</p>
-                            </th>
+                            @if ($showDeleted)
+                                <th class="px-5 py-3 text-left sm:px-6">
+                                    <p class="font-semibold text-white text-theme-xs uppercase">Eliminado por</p>
+                                </th>
+                                <th class="px-5 py-3 text-left sm:px-6 last:rounded-tr-xl">
+                                    <p class="font-semibold text-white text-theme-xs uppercase">Fecha elim.</p>
+                                </th>
+                            @else
+                                <th class="px-5 py-3 text-left sm:px-6">
+                                    <p class="font-semibold text-white text-theme-xs uppercase">Situación</p>
+                                </th>
+                                <th class="px-5 py-3 text-center sm:px-6 last:rounded-tr-xl">
+                                    <p class="font-semibold text-white text-theme-xs uppercase">Acciones</p>
+                                </th>
+                            @endif
                         </tr>
                     </thead>
                     <tbody>
@@ -467,128 +492,154 @@
                                         {{ $sale->person_name ?? 'Público General' }}
                                     </p>
                                 </td>
-                                <td class="px-5 py-4 sm:px-6">
-                                    @php
-                                        $status = $sale->status ?? 'A';
-                                        $badgeColor = 'success';
-                                        $badgeText = 'Activo';
-                                        if ($status === 'P') {
-                                            $badgeColor = 'warning';
-                                            $badgeText = 'Pendiente';
-                                        } elseif ($status !== 'A') {
-                                            $badgeColor = 'error';
-                                            $badgeText = 'Inactivo';
-                                        }
-                                    @endphp
-                                    <x-ui.badge variant="light" color="{{ $badgeColor }}">
-                                        {{ $badgeText }}
-                                    </x-ui.badge>
-                                </td>
-                                <td class="px-5 text-center py-4 sm:px-6">
-                                    <div class="flex items-center justify-center gap-2">
+                                @if ($showDeleted)
+                                    <td class="px-5 py-4 sm:px-6">
+                                        <p class="text-gray-800 text-theme-sm dark:text-white/90 font-medium">
+                                            {{ $sale->deleted_by_user_name ?: ($sale->deletedByUser?->name ?: 'Sistema') }}
+                                        </p>
+                                    </td>
+                                    <td class="px-5 py-4 sm:px-6">
+                                        <p class="text-gray-800 text-theme-sm dark:text-white/90 whitespace-nowrap">
+                                            {{ $sale->deleted_at ? $sale->deleted_at->format('d/m/Y H:i:s') : '—' }}
+                                        </p>
+                                    </td>
+                                @else
+                                    <td class="px-5 py-4 sm:px-6">
                                         @php
-                                            $documentName = mb_strtolower(trim((string) ($sale->documentType?->name ?? '')), 'UTF-8');
-                                            $canConvertTicket = str_contains($documentName, 'ticket');
+                                            $status = $sale->status ?? 'A';
+                                            $badgeColor = 'success';
+                                            $badgeText = 'Activo';
+                                            if ($status === 'P') {
+                                                $badgeColor = 'warning';
+                                                $badgeText = 'Pendiente';
+                                            } elseif ($status !== 'A') {
+                                                $badgeColor = 'error';
+                                                $badgeText = 'Inactivo';
+                                            }
                                         @endphp
-                                        @if ($canConvertTicket)
-                                            <div class="relative group">
-                                                <button type="button"
-                                                    @click="$dispatch('open-convert-ticket-modal', {
-                                                        saleId: {{ $sale->id }},
-                                                        currentPersonId: {{ $sale->person_id ? (int) $sale->person_id : 'null' }}
-                                                    })"
-                                                    class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-violet-600 text-white shadow-sm transition hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500/40"
-                                                    aria-label="Convertir a boleta o factura">
-                                                    <i class="ri-file-transfer-line"></i>
-                                                </button>
-                                                <span
-                                                    class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-3 whitespace-nowrap rounded-md bg-gray-900 px-2.5 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100 z-[100] shadow-xl">
-                                                    Convertir a boleta/factura
+                                        <x-ui.badge variant="light" color="{{ $badgeColor }}">
+                                            {{ $badgeText }}
+                                        </x-ui.badge>
+                                    </td>
+                                    <td class="px-5 text-center py-4 sm:px-6">
+                                        <div class="flex items-center justify-center gap-2">
+                                            @php
+                                                $documentName = mb_strtolower(trim((string) ($sale->documentType?->name ?? '')), 'UTF-8');
+                                                $canConvertTicket = str_contains($documentName, 'ticket');
+                                            @endphp
+                                            @if ($canConvertTicket)
+                                                <div class="relative group">
+                                                    <button type="button"
+                                                        @click="$dispatch('open-convert-ticket-modal', {
+                                                            saleId: {{ $sale->id }},
+                                                            currentPersonId: {{ $sale->person_id ? (int) $sale->person_id : 'null' }}
+                                                        })"
+                                                        class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-violet-600 text-white shadow-sm transition hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+                                                        aria-label="Convertir a boleta o factura">
+                                                        <i class="ri-file-transfer-line"></i>
+                                                    </button>
                                                     <span
-                                                        class="absolute top-full left-1/2 -ml-1 border-4 border-transparent border-t-gray-900"></span>
-                                                </span>
-                                            </div>
-                                        @endif
-                                        @if (!empty($thermalPrintEnabled))
-                                            <div class="relative group">
-                                                <button type="button"
-                                                    data-thermal-print-sale="{{ $sale->id }}"
-                                                    class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-teal-600 text-white shadow-sm transition hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
-                                                    aria-label="Imprimir comprobante en ticketera">
-                                                    <i class="ri-printer-line"></i>
-                                                </button>
-                                                <span
-                                                    class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-3 whitespace-nowrap rounded-md bg-gray-900 px-2.5 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100 z-[100] shadow-xl">
-                                                    Imprimir ticketera (mismo formato que cobro)
-                                                    <span
-                                                        class="absolute top-full left-1/2 -ml-1 border-4 border-transparent border-t-gray-900"></span>
-                                                </span>
-                                            </div>
-                                        @endif
-                                        @if ($rowOperations->isNotEmpty())
-                                            @foreach ($rowOperations as $operation)
-                                                @php
-                                                    $action = $operation->action ?? '';
-                                                    $isDelete = str_contains($action, 'destroy');
-                                                    $isCharge = str_contains($action, 'charge');
-                                                    $isPrint = str_contains($action, 'print');
-                                                    if ($isCharge && ($sale->status ?? 'A') !== 'P') {
-                                                        continue;
-                                                    }
-
-                                                    $actionUrl = $resolveActionUrl($action, $sale, $operation);
-                                                    if ($isCharge && $actionUrl !== '#') {
-                                                        $separator = str_contains($actionUrl, '?') ? '&' : '?';
-                                                        $actionUrl .=
-                                                            $separator . 'movement_id=' . urlencode($sale->id);
-                                                    }
-
-                                                    $buttonColor = $operation->color ?: '#111827';
-                                                    $buttonTextColor = str_contains($action, 'edit')
-                                                        ? '#111827'
-                                                        : '#FFFFFF';
-                                                    $buttonStyle = "background-color: {$buttonColor}; color: {$buttonTextColor};";
-                                                    $variant = $isDelete
-                                                        ? 'eliminate'
-                                                        : (str_contains($action, 'edit')
-                                                            ? 'edit'
-                                                            : 'primary');
-                                                    $variant = $isPrint ? 'outline' : $variant;
-                                                @endphp
-
-                                                @if ($isDelete)
-                                                    <form method="POST" action="{{ $actionUrl }}"
-                                                        class="relative group js-swal-delete"
-                                                        data-swal-title="Eliminar venta?"
-                                                        data-swal-text="Se eliminara la venta {{ $sale->number }}. Esta accion no se puede deshacer."
-                                                        data-swal-confirm="Si, eliminar" data-swal-cancel="Cancelar"
-                                                        data-swal-confirm-color="#ef4444"
-                                                        data-swal-cancel-color="#6b7280">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        @if ($viewId)
-                                                            <input type="hidden" name="view_id"
-                                                                value="{{ $viewId }}">
-                                                        @endif
-                                                        <x-ui.button size="icon" variant="{{ $variant }}"
-                                                            type="submit" className="rounded-xl"
-                                                            style="{{ $buttonStyle }}"
-                                                            aria-label="{{ $operation->name }}">
-                                                            <i class="{{ $operation->icon }}"></i>
-                                                        </x-ui.button>
+                                                        class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-3 whitespace-nowrap rounded-md bg-gray-900 px-2.5 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100 z-[100] shadow-xl">
+                                                        Convertir a boleta/factura
                                                         <span
-                                                            class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-3 whitespace-nowrap rounded-md bg-gray-900 px-2.5 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100 z-[100] shadow-xl">
-                                                            {{ $operation->name }}
+                                                            class="absolute top-full left-1/2 -ml-1 border-4 border-transparent border-t-gray-900"></span>
+                                                    </span>
+                                                </div>
+                                            @endif
+                                            @if (!empty($thermalPrintEnabled))
+                                                <div class="relative group">
+                                                    <button type="button"
+                                                        data-thermal-print-sale="{{ $sale->id }}"
+                                                        class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-teal-600 text-white shadow-sm transition hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
+                                                        aria-label="Imprimir comprobante en ticketera">
+                                                        <i class="ri-printer-line"></i>
+                                                    </button>
+                                                    <span
+                                                        class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-3 whitespace-nowrap rounded-md bg-gray-900 px-2.5 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100 z-[100] shadow-xl">
+                                                        Imprimir ticketera (mismo formato que cobro)
+                                                        <span
+                                                            class="absolute top-full left-1/2 -ml-1 border-4 border-transparent border-t-gray-900"></span>
+                                                    </span>
+                                                </div>
+                                            @endif
+                                            @if ($rowOperations->isNotEmpty())
+                                                @foreach ($rowOperations as $operation)
+                                                    @php
+                                                        $action = $operation->action ?? '';
+                                                        $isDelete = str_contains($action, 'destroy');
+                                                        $isCharge = str_contains($action, 'charge');
+                                                        $isPrint = str_contains($action, 'print');
+                                                        if ($isCharge && ($sale->status ?? 'A') !== 'P') {
+                                                            continue;
+                                                        }
+
+                                                        $actionUrl = $resolveActionUrl($action, $sale, $operation);
+                                                        if ($isCharge && $actionUrl !== '#') {
+                                                            $separator = str_contains($actionUrl, '?') ? '&' : '?';
+                                                            $actionUrl .=
+                                                                $separator . 'movement_id=' . urlencode($sale->id);
+                                                        }
+
+                                                        $buttonColor = $operation->color ?: '#111827';
+                                                        $buttonTextColor = str_contains($action, 'edit')
+                                                            ? '#111827'
+                                                            : '#FFFFFF';
+                                                        $buttonStyle = "background-color: {$buttonColor}; color: {$buttonTextColor};";
+                                                        $variant = $isDelete
+                                                            ? 'eliminate'
+                                                            : (str_contains($action, 'edit')
+                                                                ? 'edit'
+                                                                : 'primary');
+                                                        $variant = $isPrint ? 'outline' : $variant;
+                                                    @endphp
+
+                                                    @if ($isDelete)
+                                                        <form method="POST" action="{{ $actionUrl }}"
+                                                            class="relative group js-swal-delete"
+                                                            data-swal-title="Eliminar venta?"
+                                                            data-swal-text="Se eliminara la venta {{ $sale->number }}. Esta accion no se puede deshacer."
+                                                            data-swal-confirm="Si, eliminar" data-swal-cancel="Cancelar"
+                                                            data-swal-confirm-color="#ef4444"
+                                                            data-swal-cancel-color="#6b7280">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            @if ($viewId)
+                                                                <input type="hidden" name="view_id"
+                                                                    value="{{ $viewId }}">
+                                                            @endif
+                                                            <x-ui.button size="icon" variant="{{ $variant }}"
+                                                                type="submit" className="rounded-xl"
+                                                                style="{{ $buttonStyle }}"
+                                                                aria-label="{{ $operation->name }}">
+                                                                <i class="{{ $operation->icon }}"></i>
+                                                            </x-ui.button>
                                                             <span
-                                                                class="absolute top-full left-1/2 -ml-1 border-4 border-transparent border-t-gray-900"></span>
-                                                        </span>
-                                                    </form>
-                                                @elseif ($isPrint)
-                                                    <div class="relative group">
-                                                        <x-ui.link-button size="icon" variant="outline"
+                                                                class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-3 whitespace-nowrap rounded-md bg-gray-900 px-2.5 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100 z-[100] shadow-xl">
+                                                                {{ $operation->name }}
+                                                                <span
+                                                                    class="absolute top-full left-1/2 -ml-1 border-4 border-transparent border-t-gray-900"></span>
+                                                            </span>
+                                                        </form>
+                                                    @elseif ($isPrint)
+                                                        <div class="relative group">
+                                                            <x-ui.link-button size="icon" variant="outline"
+                                                                href="{{ $actionUrl }}" className="rounded-xl"
+                                                                style="{{ $buttonStyle }}"
+                                                                aria-label="{{ $operation->name }}" target="_blank">
+                                                                <i class="{{ $operation->icon }}"></i>
+                                                            </x-ui.link-button>
+                                                            <span
+                                                                class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-3 whitespace-nowrap rounded-md bg-gray-900 px-2.5 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100 z-[100] shadow-xl">
+                                                                {{ $operation->name }}
+                                                                <span
+                                                                    class="absolute top-full left-1/2 -ml-1 border-4 border-transparent border-t-gray-900"></span>
+                                                            </span>
+                                                        </div>
+                                                    @else
+                                                        <div class="relative group">
+                                                            <x-ui.link-button size="icon" variant="{{ $variant }}"
                                                             href="{{ $actionUrl }}" className="rounded-xl"
-                                                            style="{{ $buttonStyle }}"
-                                                            aria-label="{{ $operation->name }}" target="_blank">
+                                                            style="{{ $buttonStyle }}" aria-label="{{ $operation->name }}">
                                                             <i class="{{ $operation->icon }}"></i>
                                                         </x-ui.link-button>
                                                         <span
@@ -597,96 +648,83 @@
                                                             <span
                                                                 class="absolute top-full left-1/2 -ml-1 border-4 border-transparent border-t-gray-900"></span>
                                                         </span>
-                                                    </div>
-                                                @else
+                                                        </div>
+                                                    @endif
+                                                @endforeach
+                                            @else
+                                                @if (($sale->status ?? 'A') === 'P')
                                                     <div class="relative group">
-                                                        <x-ui.link-button size="icon" variant="{{ $variant }}"
-                                                        href="{{ $actionUrl }}" className="rounded-xl"
-                                                        style="{{ $buttonStyle }}" aria-label="{{ $operation->name }}">
-                                                        <i class="{{ $operation->icon }}"></i>
-                                                    </x-ui.link-button>
-                                                    <span
-                                                        class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-3 whitespace-nowrap rounded-md bg-gray-900 px-2.5 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100 z-[100] shadow-xl">
-                                                        {{ $operation->name }}
+                                                        <x-ui.link-button size="icon" variant="primary"
+                                                            href="{{ route('sales.charge', array_merge(['movement_id' => $sale->id], $viewId ? ['view_id' => $viewId] : [])) }}"
+                                                            className="bg-success-500 text-white hover:bg-success-600 ring-0 rounded-full"
+                                                            style="border-radius: 100%; background-color: #10B981; color: #FFFFFF;"
+                                                            aria-label="Cobrar">
+                                                            <i class="ri-money-dollar-circle-line"></i>
+                                                        </x-ui.link-button>
                                                         <span
-                                                            class="absolute top-full left-1/2 -ml-1 border-4 border-transparent border-t-gray-900"></span>
-                                                    </span>
+                                                            class="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100 z-50"
+                                                            style="transition-delay: 0.5s;">Cobrar</span>
                                                     </div>
                                                 @endif
-                                            @endforeach
-                                        @else
-                                            @if (($sale->status ?? 'A') === 'P')
                                                 <div class="relative group">
-                                                    <x-ui.link-button size="icon" variant="primary"
-                                                        href="{{ route('sales.charge', array_merge(['movement_id' => $sale->id], $viewId ? ['view_id' => $viewId] : [])) }}"
-                                                        className="bg-success-500 text-white hover:bg-success-600 ring-0 rounded-full"
-                                                        style="border-radius: 100%; background-color: #10B981; color: #FFFFFF;"
-                                                        aria-label="Cobrar">
-                                                        <i class="ri-money-dollar-circle-line"></i>
+                                                    <x-ui.link-button size="icon" variant="edit"
+                                                        href="{{ route('sales.edit', array_merge([$sale], $viewId ? ['view_id' => $viewId] : [])) }}"
+                                                        className="bg-warning-500 text-white hover:bg-warning-600 ring-0 rounded-full"
+                                                        style="border-radius: 100%; background-color: #FBBF24; color: #111827;"
+                                                        aria-label="Editar">
+                                                        <i class="ri-pencil-line"></i>
                                                     </x-ui.link-button>
                                                     <span
                                                         class="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100 z-50"
-                                                        style="transition-delay: 0.5s;">Cobrar</span>
+                                                        style="transition-delay: 0.5s;">Editar</span>
                                                 </div>
-                                            @endif
-                                            <div class="relative group">
-                                                <x-ui.link-button size="icon" variant="edit"
-                                                    href="{{ route('sales.edit', array_merge([$sale], $viewId ? ['view_id' => $viewId] : [])) }}"
-                                                    className="bg-warning-500 text-white hover:bg-warning-600 ring-0 rounded-full"
-                                                    style="border-radius: 100%; background-color: #FBBF24; color: #111827;"
-                                                    aria-label="Editar">
-                                                    <i class="ri-pencil-line"></i>
-                                                </x-ui.link-button>
-                                                <span
-                                                    class="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100 z-50"
-                                                    style="transition-delay: 0.5s;">Editar</span>
-                                            </div>
-                                            @php
-                                                $linkedOrderMovement = $sale->orderMovement ?? $sale->movement?->orderMovement;
-                                                $linkedTable = $linkedOrderMovement?->table;
-                                                $tableHasOtherPendingOrder = false;
-                                                if ($linkedOrderMovement && $linkedTable) {
-                                                    $tableHasOtherPendingOrder = \App\Models\OrderMovement::query()
-                                                        ->where('table_id', $linkedTable->id)
-                                                        ->where('id', '!=', $linkedOrderMovement->id)
-                                                        ->whereIn('status', ['PENDIENTE', 'P'])
-                                                        ->exists();
-                                                }
-
-                                                $deleteMessage = "Se eliminara la venta {$sale->number}. Esta accion no se puede deshacer.";
-                                                if ($linkedOrderMovement && $linkedTable) {
-                                                    $deleteMessage .= " El pedido asociado se volvera a cargar en la mesa {$linkedTable->name}.";
-                                                    if ($tableHasOtherPendingOrder) {
-                                                        $deleteMessage .= ' La mesa ya tiene otro pedido pendiente, por lo que conservara su estado actual.';
-                                                    } else {
-                                                        $deleteMessage .= ' La mesa volvera a estado ocupada.';
+                                                @php
+                                                    $linkedOrderMovement = $sale->orderMovement ?? $sale->movement?->orderMovement;
+                                                    $linkedTable = $linkedOrderMovement?->table;
+                                                    $tableHasOtherPendingOrder = false;
+                                                    if ($linkedOrderMovement && $linkedTable) {
+                                                        $tableHasOtherPendingOrder = \App\Models\OrderMovement::query()
+                                                            ->where('table_id', $linkedTable->id)
+                                                            ->where('id', '!=', $linkedOrderMovement->id)
+                                                            ->whereIn('status', ['PENDIENTE', 'P'])
+                                                            ->exists();
                                                     }
-                                                }
-                                            @endphp
-                                            <form method="POST"
-                                                action="{{ route('sales.destroy', array_merge([$sale], $viewId ? ['view_id' => $viewId] : [])) }}"
-                                                class="relative group js-swal-delete" data-swal-title="Eliminar venta?"
-                                                data-swal-text="{{ $deleteMessage }}"
-                                                data-swal-confirm="Si, eliminar" data-swal-cancel="Cancelar"
-                                                data-swal-confirm-color="#ef4444" data-swal-cancel-color="#6b7280">
-                                                @csrf
-                                                @method('DELETE')
-                                                @if ($viewId)
-                                                    <input type="hidden" name="view_id" value="{{ $viewId }}">
-                                                @endif
-                                                <x-ui.button size="icon" variant="eliminate" type="submit"
-                                                    className="bg-error-500 text-white hover:bg-error-600 ring-0 rounded-full"
-                                                    style="border-radius: 100%; background-color: #EF4444; color: #FFFFFF;"
-                                                    aria-label="Eliminar">
-                                                    <i class="ri-delete-bin-line"></i>
-                                                </x-ui.button>
-                                                <span
-                                                    class="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100 z-50"
-                                                    style="transition-delay: 0.5s;">Eliminar</span>
-                                            </form>
-                                        @endif
-                                    </div>
-                                </td>
+
+                                                    $deleteMessage = "Se eliminara la venta {$sale->number}. Esta accion no se puede deshacer.";
+                                                    if ($linkedOrderMovement && $linkedTable) {
+                                                        $deleteMessage .= " El pedido asociado se volvera a cargar en la mesa {$linkedTable->name}.";
+                                                        if ($tableHasOtherPendingOrder) {
+                                                            $deleteMessage .= ' La mesa ya tiene otro pedido pendiente, por lo que conservara su estado actual.';
+                                                        } else {
+                                                            $deleteMessage .= ' La mesa volvera a estado ocupada.';
+                                                        }
+                                                    }
+                                                @endphp
+                                                <form method="POST"
+                                                    action="{{ route('sales.destroy', array_merge([$sale], $viewId ? ['view_id' => $viewId] : [])) }}"
+                                                    class="relative group js-swal-delete" data-swal-title="Eliminar venta?"
+                                                    data-swal-text="{{ $deleteMessage }}"
+                                                    data-swal-confirm="Si, eliminar" data-swal-cancel="Cancelar"
+                                                    data-swal-confirm-color="#ef4444" data-swal-cancel-color="#6b7280">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    @if ($viewId)
+                                                        <input type="hidden" name="view_id" value="{{ $viewId }}">
+                                                    @endif
+                                                    <x-ui.button size="icon" variant="eliminate" type="submit"
+                                                        className="bg-error-500 text-white hover:bg-error-600 ring-0 rounded-full"
+                                                        style="border-radius: 100%; background-color: #EF4444; color: #FFFFFF;"
+                                                        aria-label="Eliminar">
+                                                        <i class="ri-delete-bin-line"></i>
+                                                    </x-ui.button>
+                                                    <span
+                                                        class="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100 z-50"
+                                                        style="transition-delay: 0.5s;">Eliminar</span>
+                                                </form>
+                                            @endif
+                                        </div>
+                                    </td>
+                                @endif
                             </tr>
                             <tr x-show="openRow === {{ $sale->id }}" x-cloak
                                 class="bg-gray-50/70 dark:bg-gray-800/40 border-b border-gray-100 justify-center dark:border-gray-800">

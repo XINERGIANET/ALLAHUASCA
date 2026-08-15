@@ -152,10 +152,14 @@ class SalesController extends Controller
             }
         }
 
-        $query = Movement::query()
-            ->select('movements.*')
+        $showDeleted = $request->boolean('show_deleted');
+        $query = Movement::query();
+        if ($showDeleted) {
+            $query->onlyTrashed();
+        }
+        $query->select('movements.*')
             ->join('sales_movements', 'sales_movements.movement_id', '=', 'movements.id')
-            ->with(['branch', 'person', 'responsibleUser.person', 'movementType', 'documentType', 'salesMovement.details', 'orderMovement.table', 'movement.orderMovement.table'])
+            ->with(['branch', 'person', 'responsibleUser.person', 'movementType', 'documentType', 'salesMovement.details', 'orderMovement.table', 'movement.orderMovement.table', 'deletedByUser'])
             ->where('movements.movement_type_id', 2)
             ->when($branchId, fn ($q) => $q->where('movements.branch_id', $branchId))
             ->when(! $branchId, fn ($q) => $q->whereRaw('1 = 0'));
@@ -331,6 +335,7 @@ class SalesController extends Controller
             'thermalPrinters' => $thermalPrintersIndex,
             'thermalPrintEnabled' => (bool) config('local_network.thermal_print_enabled', true),
             'unresolvedPrintJobs' => $unresolvedPrintJobs,
+            'showDeleted' => $showDeleted,
         ];
 
         return view('sales.index', $viewData);
@@ -1534,6 +1539,10 @@ class SalesController extends Controller
                     ]);
                 }
             }
+
+            $sale->deleted_by_user_id = auth()->id();
+            $sale->deleted_by_user_name = auth()->user() ? trim(auth()->user()->name) : 'Desconocido';
+            $sale->save();
 
             app(KardexSyncService::class)->deleteMovement((int) $sale->id);
             $sale->delete();
