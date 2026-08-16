@@ -69,16 +69,21 @@
     };
 
     $isCreateOp = function ($operation) {
-        $action = mb_strtolower((string) ($operation->action ?? ''));
-
-        return str_contains($action, 'create')
-            || str_contains($action, 'store')
-            || str_contains($action, 'open-create-payment-method-modal');
+        $act = mb_strtolower((string) ($operation->action ?? ''), 'UTF-8');
+        $name = mb_strtolower((string) ($operation->name ?? ''), 'UTF-8');
+        return str_contains($act, 'create') || str_contains($act, 'store') || str_contains($act, 'modal') || str_contains($name, 'nuevo') || str_contains($name, 'crear');
     };
-    $isEditOp = function ($operation) {
-        $action = mb_strtolower((string) ($operation->action ?? ''));
 
-        return str_contains($action, 'edit') || str_contains($action, 'update');
+    $isEditOp = function ($operation) {
+        $act = mb_strtolower((string) ($operation->action ?? ''), 'UTF-8');
+        $name = mb_strtolower((string) ($operation->name ?? ''), 'UTF-8');
+        return str_contains($act, 'edit') || str_contains($act, 'update') || str_contains($name, 'edit') || str_contains($name, 'editar') || str_contains($name, 'pago');
+    };
+
+    $isDeleteOp = function ($operation) {
+        $act = mb_strtolower((string) ($operation->action ?? ''), 'UTF-8');
+        $name = mb_strtolower((string) ($operation->name ?? ''), 'UTF-8');
+        return str_contains($act, 'destroy') || str_contains($act, 'delete') || str_contains($name, 'eliminar') || str_contains($name, 'borrar');
     };
 @endphp
 <x-common.page-breadcrumb pageTitle="{{ 'Métodos de pago' }}" />

@@ -65,11 +65,23 @@
         return '#FFFFFF';
     };
 
-    $isCreateOp = fn ($operation) => str_contains($operation->action ?? '', 'units.create')
-        || str_contains($operation->action ?? '', 'units.store')
-        || str_contains($operation->action ?? '', 'open-unit-modal');
-    $isEditOp = fn ($operation) => str_contains($operation->action ?? '', 'units.edit')
-        || str_contains($operation->action ?? '', 'units.update');
+    $isCreateOp = function ($operation) {
+        $act = mb_strtolower((string) ($operation->action ?? ''), 'UTF-8');
+        $name = mb_strtolower((string) ($operation->name ?? ''), 'UTF-8');
+        return str_contains($act, 'create') || str_contains($act, 'store') || str_contains($act, 'modal') || str_contains($name, 'nuevo') || str_contains($name, 'crear');
+    };
+
+    $isEditOp = function ($operation) {
+        $act = mb_strtolower((string) ($operation->action ?? ''), 'UTF-8');
+        $name = mb_strtolower((string) ($operation->name ?? ''), 'UTF-8');
+        return str_contains($act, 'edit') || str_contains($act, 'update') || str_contains($name, 'edit') || str_contains($name, 'editar') || str_contains($name, 'unidad');
+    };
+
+    $isDeleteOp = function ($operation) {
+        $act = mb_strtolower((string) ($operation->action ?? ''), 'UTF-8');
+        $name = mb_strtolower((string) ($operation->name ?? ''), 'UTF-8');
+        return str_contains($act, 'destroy') || str_contains($act, 'delete') || str_contains($name, 'eliminar') || str_contains($name, 'borrar');
+    };
 @endphp
 <div x-data="{}">
     <x-common.page-breadcrumb pageTitle="Unidades" />
