@@ -3733,7 +3733,7 @@ class SalesController extends Controller
 
         $summary = [];
 
-        DB::transaction(function () use ($branch, $apisunatService, &$summary) {
+        DB::transaction(function () use ($branch, &$summary) {
             $documentTypeIds = Movement::query()
                 ->where('branch_id', $branch->id)
                 ->where('movement_type_id', 2)
@@ -3742,19 +3742,9 @@ class SalesController extends Controller
 
             foreach ($documentTypeIds as $docTypeId) {
                 $docType = DocumentType::find($docTypeId);
-                $typeName = mb_strtolower($docType?->name ?? "tipo {$docTypeId}", 'UTF-8');
-                $sunatTypeCode = str_contains($typeName, 'factura') ? '01' : (str_contains($typeName, 'boleta') ? '03' : null);
 
-                $lastApiNum = 0;
-                if ($apisunatService->isConfiguredForBranch($branch) && $sunatTypeCode) {
-                    try {
-                        $lastApiNum = $apisunatService->fetchLastDocumentNumber($branch, $sunatTypeCode);
-                    } catch (\Throwable $e) {
-                        Log::warning('Error consultando lastDocument de APISUNAT: ' . $e->getMessage());
-                    }
-                }
-
-                $localLastEmitted = Movement::query()
+                // 1. Obtener todos los correlativos de comprobantes YA EMITIDOS a SUNAT en la BD local
+                $emittedNumbers = Movement::query()
                     ->where('branch_id', $branch->id)
                     ->where('movement_type_id', 2)
                     ->where('document_type_id', $docTypeId)
@@ -3764,10 +3754,12 @@ class SalesController extends Controller
                     })
                     ->pluck('number')
                     ->map(fn ($n) => (int) preg_replace('/\D+/', '', (string) $n))
-                    ->max() ?? 0;
+                    ->filter(fn ($n) => $n > 0)
+                    ->toArray();
 
-                $sequence = max(1, $lastApiNum, $localLastEmitted > 0 ? $localLastEmitted + 1 : 1);
+                $usedSet = array_flip($emittedNumbers);
 
+                // 2. Obtener todas las ventas NO EMITIDAS a SUNAT en orden cronológico (moved_at ASC, id ASC)
                 $unemittedMovements = Movement::query()
                     ->where('branch_id', $branch->id)
                     ->where('movement_type_id', 2)
@@ -3779,22 +3771,34 @@ class SalesController extends Controller
                     ->orderBy('id', 'asc')
                     ->get();
 
+                $candidate = 1;
                 $reorderedCount = 0;
-                $startSeq = $sequence;
+                $assignedNumbers = [];
 
                 foreach ($unemittedMovements as $m) {
-                    $padNum = str_pad((string) $sequence, 8, '0', STR_PAD_LEFT);
+                    // Buscar el primer número disponible que NO esté ocupado por un comprobante emitido a SUNAT
+                    while (isset($usedSet[$candidate])) {
+                        $candidate++;
+                    }
+
+                    $padNum = str_pad((string) $candidate, 8, '0', STR_PAD_LEFT);
                     if ($m->number !== $padNum) {
                         $m->number = $padNum;
                         $m->save();
                         $reorderedCount++;
                     }
-                    $sequence++;
+
+                    $assignedNumbers[] = $candidate;
+                    $usedSet[$candidate] = true;
+                    $candidate++;
                 }
 
-                $startPad = str_pad((string) $startSeq, 8, '0', STR_PAD_LEFT);
-                $endPad = str_pad((string) max($startSeq, $sequence - 1), 8, '0', STR_PAD_LEFT);
-                $summary[] = "{$docType?->name}: {$reorderedCount} comprobantes pendientes reordenados (Secuencia: {$startPad} a {$endPad})";
+                $minAssigned = ! empty($assignedNumbers) ? min($assignedNumbers) : 0;
+                $maxAssigned = ! empty($assignedNumbers) ? max($assignedNumbers) : 0;
+                $minPad = str_pad((string) $minAssigned, 8, '0', STR_PAD_LEFT);
+                $maxPad = str_pad((string) $maxAssigned, 8, '0', STR_PAD_LEFT);
+
+                $summary[] = "{$docType?->name}: {$reorderedCount} comprobantes reorganizados rellenando huecos (Rango asignado: {$minPad} a {$maxPad})";
             }
         });
 
