@@ -34,11 +34,13 @@
                     this.deletedSalesOpen = true;
                     this.deletedSalesLoading = true;
                     this.deletedSales = [];
-                    fetch('{{ route("sales.deleted") }}')
+                    fetch('{{ route("sales.deleted.list") }}', {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                    })
                         .then(res => res.json())
                         .then(json => {
                             if (json.success) {
-                                this.deletedSales = json.data || [];
+                                this.deletedSales = json.sales || json.data || [];
                             } else {
                                 alert(json.message || 'Error al cargar ventas eliminadas.');
                             }
@@ -78,7 +80,7 @@
             };
         };
     </script>
-    <div x-data="window.salesPrintIndex()">
+    <div x-data="window.salesPrintIndex()" x-on:open-deleted-sales-modal.window="openDeletedSales()">
         @php
             use Illuminate\Support\Facades\Route;
 
@@ -329,7 +331,7 @@
                     <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                         <div class="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center flex-wrap">
 
-                            <x-ui.per-page-selector :per-page="$perPage" :submit-form="false" />
+                            <x-ui.per-page-selector :per-page="$perPage" :submit-form="true" />
 
                             <div class="relative flex-1 min-w-[200px]">
                                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
@@ -346,7 +348,7 @@
                                     <span class="font-medium text-gray-100">Buscar</span>
                                 </x-ui.button>
                                 <x-ui.link-button size="md" variant="outline"
-                                    href="{{ route('sales.index', $viewId ? ['view_id' => $viewId] : []) }}"
+                                    href="{{ route('sales.index', array_merge($viewId ? ['view_id' => $viewId] : [], ['clear_filters' => 1])) }}"
                                     class="h-11 w-full sm:w-auto px-6 border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all duration-200">
                                     <i class="ri-refresh-line"></i>
                                     <span class="font-medium">Limpiar</span>
@@ -514,6 +516,20 @@
                             @endif
                         </div>
                     </div>
+
+                    {{-- Botones de Acción Masivos --}}
+                    <div class="flex flex-wrap items-center gap-2 mt-3">
+                        <button type="button" onclick="reorganizarCorrelativos()"
+                            class="inline-flex h-11 items-center gap-2 rounded-lg bg-amber-600 px-4 text-sm font-medium text-white shadow-sm hover:bg-amber-700 transition">
+                            <i class="ri-hashtag text-base"></i>
+                            <span>Reordenar Correlativos</span>
+                        </button>
+                        <button type="button" onclick="sincronizarSunatMasivo()"
+                            class="inline-flex h-11 items-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-medium text-white shadow-sm hover:bg-blue-800 transition">
+                            <i class="ri-send-plane-fill text-base"></i>
+                            <span>Enviar a APISUNAT</span>
+                        </button>
+                    </div>
                 </form>
             </div>
 
@@ -615,6 +631,34 @@
                                 </td>
                                 <td class="px-5 text-center py-4 sm:px-6">
                                     <div class="flex items-center justify-center gap-2">
+                                        @php
+                                            $docName = mb_strtolower(trim((string) ($sale->documentType?->name ?? '')), 'UTF-8');
+                                            $isEligibleSunat = str_contains($docName, 'boleta') || str_contains($docName, 'factura');
+                                            $isAlreadySentSunat = !empty($sale->electronic_invoice_external_id) || ($sale->electronic_invoice_status ?? '') === 'SENT';
+                                        @endphp
+                                        @if ($isEligibleSunat && !$isAlreadySentSunat && !$sale->trashed())
+                                            <div class="relative group">
+                                                <form method="POST" action="{{ route('sales.emit.sunat', $sale->id) }}" class="inline-block">
+                                                    @csrf
+                                                    @if ($viewId)
+                                                        <input type="hidden" name="view_id" value="{{ $viewId }}">
+                                                    @endif
+                                                    @foreach (request()->query() as $qKey => $qVal)
+                                                        @if ($qKey !== 'view_id' && !is_array($qVal))
+                                                            <input type="hidden" name="{{ $qKey }}" value="{{ $qVal }}">
+                                                        @endif
+                                                    @endforeach
+                                                    <button type="submit" class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/40" title="Enviar a SUNAT">
+                                                        <i class="ri-cloud-upload-line"></i>
+                                                    </button>
+                                                </form>
+                                                <span
+                                                    class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-3 whitespace-nowrap rounded-md bg-gray-900 px-2.5 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100 z-[100] shadow-xl">
+                                                    Enviar a APISUNAT
+                                                    <span class="absolute top-full left-1/2 -ml-1 border-4 border-transparent border-t-gray-900"></span>
+                                                </span>
+                                            </div>
+                                        @endif
                                         @php
                                             $documentName = mb_strtolower(trim((string) ($sale->documentType?->name ?? '')), 'UTF-8');
                                             $canConvertTicket = str_contains($documentName, 'ticket');
@@ -1407,6 +1451,28 @@
                 showFlashToast();
                 document.addEventListener('turbo:load', showFlashToast);
             })();
+
+            function reorganizarCorrelativos() {
+                if (!confirm("¿Desea reorganizar y resecuenciar correlativos sin huecos por tipo de documento?")) return;
+                const token = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}';
+                fetch("{{ route('sales.reorganize.correlatives') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': token, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                })
+                .then(res => res.json())
+                .then(data => { alert(data.message); if (data.success) window.location.reload(); });
+            }
+
+            function sincronizarSunatMasivo() {
+                if (!confirm("¿Desea enviar todas las Boletas y Facturas no emitidas a APISUNAT?")) return;
+                const token = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}';
+                fetch("{{ route('sales.batch.sunat') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': token, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                })
+                .then(res => res.json())
+                .then(data => { alert(data.message); if (data.success) window.location.reload(); });
+            }
 
             function descargarPdf() {
                 const btn = document.querySelector('[data-pdf-url]');

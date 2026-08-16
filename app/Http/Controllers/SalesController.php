@@ -59,6 +59,52 @@ class SalesController extends Controller
         $branchId = session('branch_id');
         $profileId = session('profile_id') ?? $request->user()?->profile_id;
         $viewId = $request->input('view_id');
+
+        // Limpiar filtros si se solicita explícitamente
+        if ($request->has('clear_filters')) {
+            session()->forget('sales_index_filters');
+            return redirect()->route('sales.index', $viewId ? ['view_id' => $viewId] : []);
+        }
+
+        $filterKeys = [
+            'search',
+            'date_from',
+            'date_to',
+            'person_id',
+            'document_type_id',
+            'payment_method_id',
+            'cash_shift_relation_id',
+            'sale_type',
+            'per_page',
+        ];
+
+        // Guardar o restaurar filtros de la sesión
+        $hasAnyFilterKeyInQuery = false;
+        foreach ($filterKeys as $k) {
+            if ($request->has($k)) {
+                $hasAnyFilterKeyInQuery = true;
+                break;
+            }
+        }
+
+        if ($hasAnyFilterKeyInQuery || $request->has('page')) {
+            $savedFilters = session('sales_index_filters', []);
+            foreach ($filterKeys as $k) {
+                if ($request->has($k)) {
+                    $savedFilters[$k] = $request->input($k);
+                }
+            }
+            session(['sales_index_filters' => $savedFilters]);
+        } elseif (session()->has('sales_index_filters')) {
+            $savedFilters = session('sales_index_filters');
+            foreach ($savedFilters as $k => $v) {
+                if ($v !== null && ! $request->has($k)) {
+                    $request->query->set($k, $v);
+                    $request->request->set($k, $v);
+                }
+            }
+        }
+
         $search = $request->input('search');
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
@@ -69,7 +115,7 @@ class SalesController extends Controller
         $cashShiftRelationId = $request->input('cash_shift_relation_id');
         $saleType = $request->input('sale_type');
         $perPage = (int) $request->input('per_page', 10);
-        $allowedPerPage = [10, 20, 50, 100];
+        $allowedPerPage = [10, 20, 50, 100, 200];
         if (! in_array($perPage, $allowedPerPage, true)) {
             $perPage = 10;
         }
@@ -225,8 +271,8 @@ class SalesController extends Controller
             });
         }
 
-        // Filtro por turno (CashShiftRelation): ventana temporal por movimientos
-        if ($cashShiftRelationId !== null && $cashShiftRelationId !== '' && $branchId && $effectiveCashRegisterId) {
+        // Filtro por turno (CashShiftRelation): solo aplicar subconsulta restringida cuando se selecciona un turno específico
+        if ($cashShiftRelationId !== null && $cashShiftRelationId !== '' && $cashShiftRelationId !== 'all' && $branchId && $effectiveCashRegisterId) {
             $csrApplied = CashShiftRelation::query()
                 ->with(['cashMovementStart', 'cashMovementEnd'])
                 ->where('branch_id', $branchId)
@@ -250,7 +296,11 @@ class SalesController extends Controller
             $query->where('sales_movements.detail_type', $saleType);
         }
 
-        $sales = $query->orderBy('movements.moved_at', 'desc')
+        // Ordenamiento correlativo
+        $sales = $query->orderByRaw('DATE(movements.moved_at) DESC')
+            ->orderBy('movements.document_type_id', 'asc')
+            ->orderBy('movements.number', 'desc')
+            ->orderBy('movements.id', 'desc')
             ->paginate($perPage)
             ->withQueryString();
 
@@ -3467,6 +3517,215 @@ class SalesController extends Controller
         $lines[] = $this->thermalPadCenter('Gracias por su preferencia', $lineWidth);
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * Endpoint JSON para el Modal de Ventas Eliminadas.
+     */
+    public function deletedSalesList(Request $request)
+    {
+        $branchId = session('branch_id');
+        $search = $request->input('search');
+
+        $sales = Movement::query()
+            ->select('movements.*')
+            ->join('sales_movements', 'sales_movements.movement_id', '=', 'movements.id')
+            ->with(['branch', 'person', 'responsibleUser.person', 'movementType', 'documentType', 'salesMovement.details'])
+            ->where('movements.movement_type_id', 2)
+            ->when($branchId, fn ($q) => $q->where('movements.branch_id', $branchId))
+            ->onlyTrashed()
+            ->when($search, function ($q) use ($search) {
+                $q->where(function ($inner) use ($search) {
+                    $inner->where('number', 'like', "%{$search}%")
+                        ->orWhere('person_name', 'like', "%{$search}%")
+                        ->orWhere('user_name', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('movements.deleted_at', 'desc')
+            ->orderBy('movements.id', 'desc')
+            ->take(100)
+            ->get();
+
+        $formatted = $sales->map(function ($sale) {
+            $displayNumber = trim((string) ($sale->electronic_invoice_number ?? ''));
+            if ($displayNumber === '') {
+                $displayNumber = strtoupper(substr($sale->documentType?->name ?? 'V', 0, 1)) . ($sale->salesMovement?->series ?? '') . '-' . $sale->number;
+            }
+
+            return [
+                'id' => $sale->id,
+                'number' => $sale->number,
+                'display_number' => $displayNumber,
+                'document_type' => $sale->documentType?->name ?? '-',
+                'date' => $sale->moved_at ? $sale->moved_at->format('d/m/Y H:i') : '-',
+                'deleted_at' => $sale->deleted_at ? $sale->deleted_at->format('d/m/Y H:i') : '-',
+                'person_name' => $sale->person_name ?? 'Público General',
+                'client' => $sale->person_name ?? 'Público General',
+                'user_name' => $sale->user_name ?? '-',
+                'deleted_by' => $sale->user_name ?? ($sale->responsibleUser?->person ? trim($sale->responsibleUser->person->first_name . ' ' . $sale->responsibleUser->person->last_name) : '-'),
+                'total' => number_format((float) ($sale->salesMovement?->total ?? 0), 2),
+            ];
+        });
+
+        return response()->json(['success' => true, 'sales' => $formatted, 'data' => $formatted]);
+    }
+
+    /**
+     * Restaurar Venta Eliminada.
+     */
+    public function restore($id)
+    {
+        $sale = Movement::onlyTrashed()->findOrFail((int) $id);
+
+        DB::transaction(function () use ($sale) {
+            $sale->restore();
+            if ($sale->salesMovement) {
+                $sale->salesMovement()->withTrashed()->restore();
+            }
+            try {
+                app(KardexSyncService::class)->syncSaleMovement((int) $sale->id);
+            } catch (\Throwable $e) {
+                Log::warning('Error sincronizando Kardex al restaurar: ' . $e->getMessage());
+            }
+        });
+
+        return response()->json(['success' => true, 'message' => "Venta N° {$sale->number} restaurada correctamente."]);
+    }
+
+    /**
+     * Emitir un solo comprobante de venta a APISUNAT.
+     */
+    public function emitSingleSunat(Request $request, Movement $sale, ApisunatService $apisunatService)
+    {
+        $filterKeys = ['search', 'date_from', 'date_to', 'person_id', 'document_type_id', 'payment_method_id', 'cash_shift_relation_id', 'sale_type', 'per_page', 'page'];
+        $savedFilters = session('sales_index_filters', []);
+        foreach ($filterKeys as $k) {
+            if ($request->has($k)) {
+                $savedFilters[$k] = $request->input($k);
+            }
+        }
+        session(['sales_index_filters' => $savedFilters]);
+
+        try {
+            $res = $this->syncElectronicInvoiceForSale($sale, $apisunatService);
+            if (($res['status'] ?? '') === 'SENT') {
+                $dateInfo = $apisunatService->resolveSunatIssueDate($sale);
+                $dateNotice = ($dateInfo['adjusted'] ?? false) ? ' (Fecha ajustada al límite de 2 días SUNAT)' : '';
+                return back()->with('status', "Comprobante N° {$sale->number} enviado y aceptado por SUNAT{$dateNotice}.");
+            }
+            return back()->with('error', $res['message'] ?? 'No se pudo emitir el comprobante.');
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Error emitiendo a SUNAT: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Enviar masivamente Boletas y Facturas a APISUNAT.
+     */
+    public function batchSyncSunat(Request $request, ApisunatService $apisunatService)
+    {
+        $branchId = session('branch_id');
+        $branch = $branchId ? Branch::find($branchId) : null;
+
+        if (! $branch || ! $apisunatService->isConfiguredForBranch($branch)) {
+            return response()->json(['success' => false, 'message' => 'Sucursal no configurada para APISUNAT.'], 422);
+        }
+
+        $movements = Movement::query()
+            ->with(['documentType', 'branch', 'salesMovement'])
+            ->where('branch_id', $branchId)
+            ->where('movement_type_id', 2)
+            ->whereHas('documentType', function ($q) {
+                $q->where(DB::raw('LOWER(name)'), 'like', '%boleta%')
+                  ->orWhere(DB::raw('LOWER(name)'), 'like', '%factura%');
+            })
+            ->get();
+
+        $sentCount = 0;
+        $adjustedDateCount = 0;
+        $skippedCount = 0;
+        $errorCount = 0;
+
+        foreach ($movements as $movement) {
+            if ($movement->electronic_invoice_external_id) {
+                $skippedCount++;
+                continue;
+            }
+
+            $dateInfo = $apisunatService->resolveSunatIssueDate($movement);
+            if ($dateInfo['adjusted'] ?? false) {
+                $adjustedDateCount++;
+            }
+
+            $res = $this->syncElectronicInvoiceForSale($movement, $apisunatService);
+            if (($res['status'] ?? '') === 'SENT') {
+                $sentCount++;
+            } elseif (($res['status'] ?? '') === 'SKIPPED') {
+                $skippedCount++;
+            } else {
+                $errorCount++;
+            }
+        }
+
+        $dateAdjustMsg = $adjustedDateCount > 0 ? " ({$adjustedDateCount} con fecha ajustada al límite de 2 días SUNAT)" : "";
+        $msg = "Envío masivo completado. Enviados: {$sentCount}{$dateAdjustMsg}, Omitidos/Emitidos: {$skippedCount}, Errores: {$errorCount}.";
+
+        return response()->json(['success' => true, 'message' => $msg]);
+    }
+
+    /**
+     * Reorganizar y resecuenciar correlativos por tipo de documento para eliminar huecos.
+     */
+    public function reorganizeCorrelatives(Request $request)
+    {
+        $branchId = session('branch_id');
+        if (! $branchId) {
+            return response()->json(['success' => false, 'message' => 'No se encontró la sucursal activa.'], 422);
+        }
+
+        $summary = [];
+
+        DB::transaction(function () use ($branchId, &$summary) {
+            $documentTypeIds = Movement::query()
+                ->where('branch_id', $branchId)
+                ->where('movement_type_id', 2)
+                ->distinct()
+                ->pluck('document_type_id');
+
+            foreach ($documentTypeIds as $docTypeId) {
+                $docType = DocumentType::find($docTypeId);
+                $typeName = $docType?->name ?? "Tipo {$docTypeId}";
+
+                $movements = Movement::query()
+                    ->where('branch_id', $branchId)
+                    ->where('movement_type_id', 2)
+                    ->where('document_type_id', $docTypeId)
+                    ->orderBy('moved_at', 'asc')
+                    ->orderBy('id', 'asc')
+                    ->get();
+
+                $sequence = 1;
+                foreach ($movements as $m) {
+                    $newCorrelative = str_pad((string) $sequence, 8, '0', STR_PAD_LEFT);
+                    $updateData = ['number' => $newCorrelative];
+
+                    if ($m->electronic_invoice_number) {
+                        $prefix = strtoupper(substr($typeName, 0, 1));
+                        $series = $m->salesMovement?->series ?? '001';
+                        $updateData['electronic_invoice_number'] = "{$prefix}{$series}-{$newCorrelative}";
+                    }
+
+                    $m->update($updateData);
+                    $sequence++;
+                }
+
+                $count = $movements->count();
+                $lastNum = $count > 0 ? str_pad((string) $count, 8, '0', STR_PAD_LEFT) : '00000000';
+                $summary[] = "{$typeName}: {$count} comprobantes (00000001 al {$lastNum})";
+            }
+        });
+
+        return response()->json(['success' => true, 'message' => 'Correlativos reorganizados sin huecos: ' . implode(' | ', $summary)]);
     }
 
     private function wrapEscPosPlainPayload(string $text): string

@@ -49,6 +49,42 @@ class ApisunatService
             && trim((string) $config->persona_token) !== '';
     }
 
+    /**
+     * Valida y ajusta la fecha de emisión a los 2 días máximos permitidos por SUNAT (RS 000003-2023/SUNAT)
+     * conservando la fecha original histórica en la base de datos local.
+     */
+    public function resolveSunatIssueDate(Movement $sale): array
+    {
+        $saleDate = $sale->moved_at
+            ? \Illuminate\Support\Carbon::parse($sale->moved_at)
+            : ($sale->created_at ? \Illuminate\Support\Carbon::parse($sale->created_at) : now());
+
+        $minAllowedDate = now()->subDays(2)->startOfDay();
+        $maxAllowedDate = now()->endOfDay();
+
+        if ($saleDate->lt($minAllowedDate)) {
+            // Si la fecha es de hace más de 2 días, enviamos a SUNAT con el límite máximo permitido (hace 2 días)
+            $issueDate = $minAllowedDate->format('Y-m-d');
+            $issueTime = now()->format('H:i:s');
+            $adjusted = true;
+        } elseif ($saleDate->gt($maxAllowedDate)) {
+            // Si la fecha es futura, usamos el día de hoy
+            $issueDate = now()->format('Y-m-d');
+            $issueTime = now()->format('H:i:s');
+            $adjusted = true;
+        } else {
+            $issueDate = $saleDate->format('Y-m-d');
+            $issueTime = $saleDate->format('H:i:s');
+            $adjusted = false;
+        }
+
+        return [
+            'issue_date' => $issueDate,
+            'issue_time' => $issueTime,
+            'adjusted' => $adjusted,
+        ];
+    }
+
     public function emitSale(Movement $sale): array
     {
         $sale->loadMissing([
@@ -87,6 +123,9 @@ class ApisunatService
         $totals = $this->resolveMovementTotals($sale);
         $apiUrl = $this->resolveApiUrl($config);
 
+        $localNum = (int) preg_replace('/\D+/', '', (string) $sale->number);
+        $apiLastNum = 0;
+
         $correlativeResp = Http::timeout(20)->post($apiUrl.'/personas/lastDocument', [
             'personaId' => (string) $config->persona_id,
             'personaToken' => (string) $config->persona_token,
@@ -94,31 +133,56 @@ class ApisunatService
             'serie' => $catalog['serie'],
         ]);
 
-        if ($correlativeResp->failed()) {
-            throw new \RuntimeException('Error consultando correlativo en Apisunat: '.$correlativeResp->body());
+        if ($correlativeResp->successful()) {
+            $obj = $correlativeResp->object();
+            $sug = (int) data_get($obj, 'suggestedNumber', 0);
+            $last = (int) data_get($obj, 'lastNumber', 0);
+            $apiLastNum = max($sug, $last);
         }
 
-        $suggestedNumber = trim((string) data_get($correlativeResp->object(), 'suggestedNumber', ''));
-        if ($suggestedNumber === '' || ! ctype_digit($suggestedNumber)) {
-            throw new \RuntimeException('Apisunat devolvió un correlativo inválido.');
-        }
+        $nextApiNum = $apiLastNum > 0 ? $apiLastNum + 1 : 1;
+        $targetNum = max($localNum, $nextApiNum);
 
-        $number = str_pad($suggestedNumber, 8, '0', STR_PAD_LEFT);
-        $fileName = trim((string) ($branch?->ruc ?? '0')).'-'.$catalog['type'].'-'.$catalog['serie'].'-'.$number;
-        $documentBody = $this->buildDocumentBody($sale, $catalog, $customerDocument, $customerDocType, $totals, $number);
-        $this->validateDocumentBodyForSunat($documentBody);
+        $attempts = 0;
+        $sendResp = null;
+        $number = '';
+        $fileName = '';
 
-        $sendResp = Http::timeout(35)->post($apiUrl.'/personas/v1/sendBill', [
-            'personaId' => (string) $config->persona_id,
-            'personaToken' => (string) $config->persona_token,
-            'fileName' => $fileName,
-            'documentBody' => $documentBody,
-        ]);
+        // Bucle de reintento por numeración repetida
+        while ($attempts < 3) {
+            $attempts++;
+            $number = str_pad((string) $targetNum, 8, '0', STR_PAD_LEFT);
+            $fileName = trim((string) ($branch?->ruc ?? '0')).'-'.$catalog['type'].'-'.$catalog['serie'].'-'.$number;
+            $documentBody = $this->buildDocumentBody($sale, $catalog, $customerDocument, $customerDocType, $totals, $number);
+            $this->validateDocumentBodyForSunat($documentBody);
 
-        if ($sendResp->failed()) {
+            $sendResp = Http::timeout(35)->post($apiUrl.'/personas/v1/sendBill', [
+                'personaId' => (string) $config->persona_id,
+                'personaToken' => (string) $config->persona_token,
+                'fileName' => $fileName,
+                'documentBody' => $documentBody,
+            ]);
+
+            if ($sendResp->successful()) {
+                break;
+            }
+
             $errorMessage = data_get($sendResp->object(), 'error.message')
                 ?: data_get($sendResp->json(), 'error.message')
                 ?: $sendResp->body();
+
+            if (str_contains(mb_strtolower($errorMessage, 'UTF-8'), 'repetida') || str_contains(mb_strtolower($errorMessage, 'UTF-8'), 'ya existe')) {
+                $targetNum++;
+                continue;
+            }
+
+            throw new \RuntimeException('Error enviando comprobante a Apisunat: '.$errorMessage);
+        }
+
+        if (! $sendResp || $sendResp->failed()) {
+            $errorMessage = data_get($sendResp?->object(), 'error.message')
+                ?: data_get($sendResp?->json(), 'error.message')
+                ?: ($sendResp ? $sendResp->body() : 'Error enviando comprobante a Apisunat.');
 
             throw new \RuntimeException('Error enviando comprobante a Apisunat: '.$errorMessage);
         }
@@ -129,8 +193,14 @@ class ApisunatService
             throw new \RuntimeException('Apisunat no devolvió documentId.');
         }
 
-        $extraDocumentData = $this->getDocumentById($documentId, $branch);
-        $urls = $this->extractDocumentUrls($extraDocumentData);
+        $extraDocumentData = [];
+        $urls = [];
+        try {
+            $extraDocumentData = $this->getDocumentById($documentId, $branch);
+            $urls = $this->extractDocumentUrls($extraDocumentData);
+        } catch (\Throwable $e) {
+            // Se continúa si no se pudo consultar el detalle extra de forma inmediata
+        }
 
         return [
             'status' => 'SENT',
@@ -293,12 +363,14 @@ class ApisunatService
         $details = $this->resolveDetailsForSale($sale);
         $defaultTaxPercent = $this->resolveDefaultTaxPercentForBranch($branch);
 
+        $dates = $this->resolveSunatIssueDate($sale);
+
         $documentBody = [
             'cbc:UBLVersionID' => ['_text' => '2.1'],
             'cbc:CustomizationID' => ['_text' => '2.0'],
             'cbc:ID' => ['_text' => $catalog['serie'].'-'.$number],
-            'cbc:IssueDate' => ['_text' => now()->format('Y-m-d')],
-            'cbc:IssueTime' => ['_text' => now()->format('H:i:s')],
+            'cbc:IssueDate' => ['_text' => $dates['issue_date']],
+            'cbc:IssueTime' => ['_text' => $dates['issue_time']],
             'cbc:InvoiceTypeCode' => [
                 '_attributes' => ['listID' => '0101'],
                 '_text' => $catalog['type'],
