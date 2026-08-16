@@ -123,7 +123,10 @@ class ApisunatService
         $totals = $this->resolveMovementTotals($sale);
         $apiUrl = $this->resolveApiUrl($config);
 
-        // 1. Obtener todos los correlativos locales ya emitidos electrónicamente
+        // 1. Obtener número local asignado a esta venta (ej: 11)
+        $localNum = (int) preg_replace('/\D+/', '', (string) $sale->number);
+
+        // 2. Obtener todos los correlativos locales ya emitidos electrónicamente
         $usedNumbers = Movement::query()
             ->where('branch_id', $sale->branch_id)
             ->where('document_type_id', $sale->document_type_id)
@@ -136,7 +139,7 @@ class ApisunatService
 
         $usedSet = array_flip($usedNumbers);
 
-        // 2. Consultar el último número emitido en APISUNAT
+        // 3. Consultar el último número emitido en APISUNAT
         $apiLastNum = 0;
         $correlativeResp = Http::timeout(20)->post($apiUrl.'/personas/lastDocument', [
             'personaId' => (string) $config->persona_id,
@@ -152,28 +155,34 @@ class ApisunatService
             $apiLastNum = max($sug, $last);
         }
 
-        // 3. Buscar el primer hueco previo sin emitir entre 1 y apiLastNum
-        $firstGap = null;
-        if ($apiLastNum > 0) {
-            for ($i = 1; $i <= $apiLastNum; $i++) {
-                if (! isset($usedSet[$i])) {
-                    $firstGap = $i;
-                    break;
+        // 4. Determinación inteligente del correlativo para APISUNAT:
+        // A. Si la venta ya tiene un número local propio ($localNum) y este NO ha sido emitido aún, probar primero con $localNum.
+        // B. Si $localNum ya está ocupado o es 0, buscar el primer hueco no emitido ($firstGap).
+        // C. De lo contrario, usar $apiLastNum + 1.
+        if ($localNum > 0 && ! isset($usedSet[$localNum])) {
+            $targetNum = $localNum;
+        } else {
+            $firstGap = null;
+            if ($apiLastNum > 0) {
+                for ($i = 1; $i <= $apiLastNum; $i++) {
+                    if (! isset($usedSet[$i])) {
+                        $firstGap = $i;
+                        break;
+                    }
                 }
             }
-        }
 
-        // 4. Determinación estricta del correlativo para APISUNAT
-        if ($firstGap !== null) {
-            $targetNum = $firstGap;
-        } elseif ($apiLastNum > 0) {
-            $targetNum = $apiLastNum + 1;
-        } else {
-            $candidate = 1;
-            while (isset($usedSet[$candidate])) {
-                $candidate++;
+            if ($firstGap !== null) {
+                $targetNum = $firstGap;
+            } elseif ($apiLastNum > 0) {
+                $targetNum = $apiLastNum + 1;
+            } else {
+                $candidate = 1;
+                while (isset($usedSet[$candidate])) {
+                    $candidate++;
+                }
+                $targetNum = $candidate;
             }
-            $targetNum = $candidate;
         }
 
         $attempts = 0;
@@ -181,8 +190,8 @@ class ApisunatService
         $number = '';
         $fileName = '';
 
-        // Bucle de reintento automático por numeración repetida
-        while ($attempts < 5) {
+        // 5. Bucle de reintento automático por numeración repetida en APISUNAT (hasta 25 intentos)
+        while ($attempts < 25) {
             $attempts++;
             while (isset($usedSet[$targetNum])) {
                 $targetNum++;
@@ -204,11 +213,27 @@ class ApisunatService
                 break;
             }
 
-            $errorMessage = data_get($sendResp->object(), 'error.message')
-                ?: data_get($sendResp->json(), 'error.message')
-                ?: $sendResp->body();
+            $rawBody = (string) $sendResp->body();
+            $errorObj = $sendResp->object();
+            $errorJson = $sendResp->json();
 
-            if (str_contains(mb_strtolower($errorMessage, 'UTF-8'), 'repetida') || str_contains(mb_strtolower($errorMessage, 'UTF-8'), 'ya existe')) {
+            $errorMessage = data_get($errorObj, 'error.message')
+                ?: data_get($errorObj, 'message')
+                ?: data_get($errorObj, 'description')
+                ?: data_get($errorJson, 'error.message')
+                ?: data_get($errorJson, 'message')
+                ?: data_get($errorJson, 'description')
+                ?: $rawBody;
+
+            $lowerErr = mb_strtolower($errorMessage, 'UTF-8');
+
+            if (
+                str_contains($lowerErr, 'repetida') ||
+                str_contains($lowerErr, 'ya existe') ||
+                str_contains($lowerErr, 'registrado') ||
+                str_contains($lowerErr, 'duplicate') ||
+                str_contains($lowerErr, 'exist')
+            ) {
                 $usedSet[$targetNum] = true;
                 $targetNum++;
                 continue;
@@ -218,9 +243,17 @@ class ApisunatService
         }
 
         if (! $sendResp || $sendResp->failed()) {
-            $errorMessage = data_get($sendResp?->object(), 'error.message')
-                ?: data_get($sendResp?->json(), 'error.message')
-                ?: ($sendResp ? $sendResp->body() : 'Error enviando comprobante a Apisunat.');
+            $rawBody = (string) ($sendResp ? $sendResp->body() : 'Sin respuesta de APISUNAT.');
+            $errorObj = $sendResp?->object();
+            $errorJson = $sendResp?->json();
+
+            $errorMessage = data_get($errorObj, 'error.message')
+                ?: data_get($errorObj, 'message')
+                ?: data_get($errorObj, 'description')
+                ?: data_get($errorJson, 'error.message')
+                ?: data_get($errorJson, 'message')
+                ?: data_get($errorJson, 'description')
+                ?: $rawBody;
 
             throw new \RuntimeException('Error enviando comprobante a Apisunat: '.$errorMessage);
         }
