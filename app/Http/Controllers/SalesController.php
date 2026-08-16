@@ -1816,47 +1816,9 @@ class SalesController extends Controller
     {
         $sale = $this->resolvePrintableForTicket($sale);
         $printData = $this->buildSalePrintData($sale, $request);
-        if ($request->boolean('direct_print')) {
-            $printData['autoPrint'] = true;
+        $printData['autoPrint'] = $request->boolean('direct_print', false);
 
-            return view('sales.print.ticket', $printData);
-        }
-
-        $printData['autoPrint'] = false;
-
-        $html = view('sales.print.ticket', $printData)->render();
-        $pageHeight = $this->estimateSaleTicketHeight($sale);
-        $pdfBinary = $this->renderPdfWithWkhtmltopdf($html, null, [
-            '--page-width',
-            '80mm',
-            '--page-height',
-            $pageHeight,
-            '--margin-top',
-            '0',
-            '--margin-right',
-            '0',
-            '--margin-bottom',
-            '0',
-            '--margin-left',
-            '0',
-            '--print-media-type',
-            '--disable-smart-shrinking',
-            '--dpi',
-            '203',
-        ]);
-
-        if ($pdfBinary === null) {
-            $printData['autoPrint'] = true;
-
-            return view('sales.print.ticket', $printData);
-        }
-
-        $docName = strtoupper(substr($sale->documentType?->name ?? 'T', 0, 1)).$this->ticketSeriesForMovement($sale).'-'.$sale->number;
-
-        return response($pdfBinary, 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="'.$docName.'-ticket.pdf"',
-        ]);
+        return view('sales.print.ticket', $printData);
     }
 
     private function estimateSaleTicketHeight(Movement $sale): string
@@ -2470,7 +2432,7 @@ class SalesController extends Controller
             return null;
         }
 
-        return 'https://api.qrserver.com/v1/create-qr-code/?size=170x170&margin=0&data='.rawurlencode($payload);
+        return 'https://quickchart.io/qr?size=180&margin=1&text='.rawurlencode($payload);
     }
 
     /**
