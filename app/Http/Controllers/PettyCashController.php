@@ -111,8 +111,8 @@ class PettyCashController extends Controller
             return redirect()->route('petty-cash.index', $params);
         }
 
-        // Si no se envió parámetro cash_shift_relation_id en la URL y existe un turno previo, seleccionar el último turno por defecto
-        if ($rawShiftRelationInput === null && $branchId && $selectedBoxId) {
+        // Si no vino el parámetro cash_shift_relation_id en la petición (primera carga), seleccionar el último turno por defecto
+        if (!$request->has('cash_shift_relation_id') && $branchId && $selectedBoxId) {
             $lastShift = CashShiftRelation::query()
                 ->where('branch_id', $branchId)
                 ->whereHas('cashMovementStart', function ($q) use ($selectedBoxId) {
@@ -240,6 +240,10 @@ class PettyCashController extends Controller
                 InsensitiveSearch::whereInsensitiveLike($q, 'user_name', $search, 'or');
                 InsensitiveSearch::whereInsensitiveLike($q, 'responsible_name', $search, 'or');
                 InsensitiveSearch::whereInsensitiveLike($q, 'number', $search, 'or');
+                InsensitiveSearch::whereInsensitiveLike($q, 'comment', $search, 'or');
+                $q->orWhereHas('cashMovement.paymentConcept', function ($pcQ) use ($search) {
+                    InsensitiveSearch::whereInsensitiveLike($pcQ, 'description', $search);
+                });
             });
         })
             ->orderBy('movements.id', 'desc')
