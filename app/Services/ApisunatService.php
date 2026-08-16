@@ -482,7 +482,7 @@ class ApisunatService
                     ],
                     'cac:PartyLegalEntity' => [
                         'cbc:RegistrationName' => [
-                            '_text' => $customerName !== '' ? $customerName : 'CLIENTES VARIOS',
+                            '_text' => $this->sanitizeCustomerRegistrationName($customerName, $customerDocType),
                         ],
                     ],
                 ],
@@ -737,6 +737,23 @@ class ApisunatService
         return ($taxRate && is_numeric($taxRate->tax_rate) && (float) $taxRate->tax_rate > 0)
             ? (float) $taxRate->tax_rate
             : 18.0;
+    }
+
+    private function sanitizeCustomerRegistrationName(string $name, string $docType): string
+    {
+        $name = trim($name);
+
+        // Si es boleta sin DNI (docType 0) o está vacío
+        if ($name === '' || $name === '-' || $docType === '0') {
+            return 'CLIENTES VARIOS';
+        }
+
+        // Si tiene menos de 3 caracteres (ej. "Dj"), SUNAT rechaza con el Error 2022 (estándar mínimo 3 caracteres)
+        if (mb_strlen($name, 'UTF-8') < 3) {
+            return mb_strtoupper($name, 'UTF-8') . ' CLIENTE';
+        }
+
+        return mb_strtoupper($name, 'UTF-8');
     }
 
     private function findUrlByKeyword(array $payload, array $keywords): ?string
