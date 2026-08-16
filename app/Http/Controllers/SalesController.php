@@ -184,8 +184,8 @@ class SalesController extends Controller
                 ->get();
         }
 
-        // Por defecto: filtrar por el turno actual (o último) de la caja seleccionada/en sesión
-        if (($cashShiftRelationId === null || $cashShiftRelationId === '') && $branchId && $effectiveCashRegisterId) {
+        // Por defecto: filtrar por el turno actual (o último) de la caja seleccionada/en sesión solo en la primera carga sin parámetro
+        if (! $request->has('cash_shift_relation_id') && $branchId && $effectiveCashRegisterId) {
             $lastShift = CashShiftRelation::query()
                 ->where('branch_id', $branchId)
                 ->whereHas('cashMovementStart', function ($q) use ($effectiveCashRegisterId) {
