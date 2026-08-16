@@ -3900,4 +3900,68 @@ class SalesController extends Controller
 
         return null;
     }
+
+    public function syncApisunatCorrelatives(Request $request)
+    {
+        try {
+            $branchId = (int) session('branch_id');
+            $branch = $branchId ? Branch::find($branchId) : null;
+            if (! $branch) {
+                return response()->json(['success' => false, 'message' => 'No se encontró sucursal activa.'], 422);
+            }
+
+            $apisunatService = app(ApisunatService::class);
+            if (! $apisunatService->isConfiguredForBranch($branch)) {
+                return response()->json(['success' => false, 'message' => 'La sucursal no tiene facturación electrónica configurada.'], 422);
+            }
+
+            $documentTypes = DocumentType::where(function ($q) {
+                $q->where('name', 'like', '%boleta%')
+                  ->orWhere('name', 'like', '%factura%');
+            })->get();
+
+            $summary = [];
+
+            DB::transaction(function () use ($branch, $documentTypes, $apisunatService, &$summary) {
+                foreach ($documentTypes as $docType) {
+                    $typeName = mb_strtolower($docType->name ?? '', 'UTF-8');
+                    $sunatTypeCode = str_contains($typeName, 'factura') ? '01' : '03';
+
+                    $nextFreeNum = $apisunatService->fetchLastDocumentNumber($branch, $sunatTypeCode);
+                    if ($nextFreeNum <= 0) {
+                        continue;
+                    }
+
+                    $unemittedMovements = Movement::query()
+                        ->where('branch_id', $branch->id)
+                        ->where('movement_type_id', 2)
+                        ->where('document_type_id', $docType->id)
+                        ->whereNull('electronic_invoice_external_id')
+                        ->orderBy('moved_at', 'asc')
+                        ->orderBy('id', 'asc')
+                        ->get();
+
+                    $seq = $nextFreeNum;
+                    foreach ($unemittedMovements as $m) {
+                        $padNum = str_pad((string) $seq, 8, '0', STR_PAD_LEFT);
+                        $m->number = $padNum;
+                        $m->save();
+                        $seq++;
+                    }
+
+                    $summary[] = "{$docType->name}: Próximo libre -> " . str_pad((string) $nextFreeNum, 8, '0', STR_PAD_LEFT);
+                }
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Sincronización con APISUNAT realizada correctamente: ' . implode(' | ', $summary),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al sincronizar con APISUNAT: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 }
