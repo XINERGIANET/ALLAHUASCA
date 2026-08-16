@@ -221,7 +221,29 @@
                                                     </x-ui.button>
                                                     <span class="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100 z-50" style="transition-delay: 0.5s;">{{ $operation->name }}</span>
                                                 </form>
-                                            @elseif ($isEdit)
+                                             @elseif ($isEdit)
+                                                <div class="relative group">
+                                                    <x-ui.button
+                                                        size="icon"
+                                                        variant="{{ $variant }}"
+                                                        type="button"
+                                                        className="rounded-xl"
+                                                        style="{{ $buttonStyle }}"
+                                                        aria-label="{{ $operation->name }}"
+                                                        x-on:click.prevent="$dispatch('open-edit-tax-rate-modal', {{ Illuminate\Support\Js::from([
+                                                            'id' => $taxRate->id,
+                                                            'code' => $taxRate->code,
+                                                            'description' => $taxRate->description,
+                                                            'tax_rate' => $taxRate->tax_rate,
+                                                            'order_num' => $taxRate->order_num,
+                                                            'status' => (bool) $taxRate->status,
+                                                        ]) }})"
+                                                    >
+                                                        <i class="{{ $operation->icon }}"></i>
+                                                    </x-ui.button>
+                                                    <span class="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100 z-50" style="transition-delay: 0.5s;">{{ $operation->name }}</span>
+                                                </div>
+                                             @else
                                                 <div class="relative group">
                                                     <x-ui.link-button
                                                         size="icon"
@@ -235,21 +257,7 @@
                                                     </x-ui.link-button>
                                                     <span class="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100 z-50" style="transition-delay: 0.5s;">{{ $operation->name }}</span>
                                                 </div>
-                                            @else
-                                                <div class="relative group">
-                                                    <x-ui.link-button
-                                                        size="icon"
-                                                        variant="{{ $variant }}"
-                                                        href="{{ $actionUrl }}"
-                                                        className="rounded-xl"
-                                                        style="{{ $buttonStyle }}"
-                                                        aria-label="{{ $operation->name }}"
-                                                    >
-                                                        <i class="{{ $operation->icon }}"></i>
-                                                    </x-ui.link-button>
-                                                    <span class="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100 z-50" style="transition-delay: 0.5s;">{{ $operation->name }}</span>
-                                                </div>
-                                            @endif
+                                             @endif
                                         @endforeach
                                     </div>
                                 </td>
@@ -345,5 +353,7 @@
                 </form>
             </div>
         </x-ui.modal>
+
+        @include('tax_rates.edit', ['taxRate' => null])
     </div>
 @endsection

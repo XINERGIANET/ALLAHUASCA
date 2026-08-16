@@ -438,8 +438,8 @@ class ApisunatService
                 continue;
             }
 
-            $taxPercent = $defaultTaxPercent;
-            $taxFactor = $taxPercent > 0 ? ($taxPercent / 100) : 0.18;
+            $taxPercent = $defaultTaxPercent > 0 ? $defaultTaxPercent : 18.0;
+            $taxFactor = $taxPercent / 100;
             $lineSubtotal = round($taxFactor > 0 ? ($lineTotal / (1 + $taxFactor)) : $lineTotal, 2);
             $lineIgv = round($lineTotal - $lineSubtotal, 2);
             $grossUnitPrice = round($lineTotal / $billableQty, 2);
@@ -488,7 +488,7 @@ class ApisunatService
                             '_text' => $lineIgv,
                         ],
                         'cac:TaxCategory' => [
-                            'cbc:Percent' => ['_text' => round($taxFactor * 100, 2)],
+                            'cbc:Percent' => ['_text' => round($taxPercent, 2)],
                             'cbc:TaxExemptionReasonCode' => ['_text' => '10'],
                             'cac:TaxScheme' => [
                                 'cbc:ID' => ['_text' => '1000'],
@@ -568,12 +568,26 @@ class ApisunatService
         return $documentBody;
     }
 
-    private function validateDocumentBodyForSunat(array $documentBody): void
+    private function validateDocumentBodyForSunat(array &$documentBody): void
     {
-        $lines = data_get($documentBody, 'cac:InvoiceLine', []);
+        $lines = &$documentBody['cac:InvoiceLine'];
         if (! is_array($lines) || count($lines) === 0) {
             throw new \RuntimeException('No se puede emitir electrónicamente: el comprobante no tiene líneas válidas para SUNAT.');
         }
+
+        // Armonización y validación SUNAT (Regla 3462): La tasa del IGV debe ser idéntica en todas las líneas del comprobante
+        $firstGravadoPercent = null;
+        foreach ($lines as &$line) {
+            $taxReasonCode = trim((string) data_get($line, 'cac:TaxTotal.cac:TaxSubtotal.0.cac:TaxCategory.cbc:TaxExemptionReasonCode._text', '10'));
+            if ($taxReasonCode === '10') {
+                $linePercent = (float) data_get($line, 'cac:TaxTotal.cac:TaxSubtotal.0.cac:TaxCategory.cbc:Percent._text', 18.0);
+                if ($firstGravadoPercent === null) {
+                    $firstGravadoPercent = $linePercent > 0 ? $linePercent : 18.0;
+                }
+                data_set($line, 'cac:TaxTotal.cac:TaxSubtotal.0.cac:TaxCategory.cbc:Percent._text', round($firstGravadoPercent, 2));
+            }
+        }
+        unset($line);
 
         foreach ($lines as $idx => $line) {
             $lineNumber = $idx + 1;
