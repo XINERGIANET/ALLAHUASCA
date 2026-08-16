@@ -519,10 +519,15 @@
 
                     {{-- Botones de Acción Masivos --}}
                     <div class="flex flex-wrap items-center gap-2 mt-3">
+                        <button type="button" onclick="sincronizarApisunat()"
+                            class="inline-flex h-11 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white shadow-sm hover:bg-blue-700 transition">
+                            <i class="ri-cloud-line text-base"></i>
+                            <span>Sincronizar APISUNAT</span>
+                        </button>
                         <button type="button" onclick="reorganizarCorrelativos()"
                             class="inline-flex h-11 items-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 transition">
                             <i class="ri-refresh-line text-base"></i>
-                            <span>Sincronizar con APISUNAT</span>
+                            <span>Reorganizar Correlativos Sin Huecos</span>
                         </button>
                     </div>
                 </form>
@@ -1447,8 +1452,19 @@
                 document.addEventListener('turbo:load', showFlashToast);
             })();
 
+            function sincronizarApisunat() {
+                if (!confirm("¿Desea consultar en APISUNAT los últimos correlativos emitidos para sincronizar las series de la sucursal activa?")) return;
+                const token = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}';
+                fetch("{{ route('sales.sync.apisunat') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': token, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                })
+                .then(res => res.json())
+                .then(data => { alert(data.message); if (data.success) window.location.reload(); });
+            }
+
             function reorganizarCorrelativos() {
-                if (!confirm("¿Desea sincronizar los correlativos locales con el último comprobante emitido en APISUNAT?")) return;
+                if (!confirm("¿Desea reorganizar secuencialmente los correlativos de las ventas PENDIENTES (sin tocar las ya emitidas a SUNAT) para eliminar cualquier hueco?")) return;
                 const token = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}';
                 fetch("{{ route('sales.reorganize.correlatives') }}", {
                     method: 'POST',

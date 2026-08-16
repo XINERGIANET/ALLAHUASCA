@@ -3743,46 +3743,62 @@ class SalesController extends Controller
             foreach ($documentTypeIds as $docTypeId) {
                 $docType = DocumentType::find($docTypeId);
                 $typeName = mb_strtolower($docType?->name ?? "tipo {$docTypeId}", 'UTF-8');
-                $sunatTypeCode = str_contains($typeName, 'factura') ? '01' : '03';
+                $sunatTypeCode = str_contains($typeName, 'factura') ? '01' : (str_contains($typeName, 'boleta') ? '03' : null);
 
                 $lastApiNum = 0;
-                try {
-                    $lastApiNum = $apisunatService->fetchLastDocumentNumber($branch, $sunatTypeCode);
-                } catch (\Throwable $e) {
-                    Log::warning('Error consultando lastDocument de APISUNAT: ' . $e->getMessage());
-                }
-
-                $movements = Movement::query()
-                    ->where('branch_id', $branch->id)
-                    ->where('movement_type_id', 2)
-                    ->where('document_type_id', $docTypeId)
-                    ->orderBy('moved_at', 'asc')
-                    ->orderBy('id', 'asc')
-                    ->get();
-
-                $sequence = max(1, $lastApiNum + 1);
-
-                foreach ($movements as $m) {
-                    if ($m->electronic_invoice_number) {
-                        $eNum = (int) preg_replace('/\D+/', '', (string) $m->electronic_invoice_number);
-                        if ($eNum > 0) {
-                            $padNum = str_pad((string) $eNum, 8, '0', STR_PAD_LEFT);
-                            $m->number = $padNum;
-                            $m->save();
-                        }
-                    } else {
-                        $padNum = str_pad((string) $sequence, 8, '0', STR_PAD_LEFT);
-                        $m->number = $padNum;
-                        $m->save();
-                        $sequence++;
+                if ($apisunatService->isConfiguredForBranch($branch) && $sunatTypeCode) {
+                    try {
+                        $lastApiNum = $apisunatService->fetchLastDocumentNumber($branch, $sunatTypeCode);
+                    } catch (\Throwable $e) {
+                        Log::warning('Error consultando lastDocument de APISUNAT: ' . $e->getMessage());
                     }
                 }
 
-                $summary[] = "{$docType?->name}: Último emitido APISUNAT: " . str_pad((string) $lastApiNum, 8, '0', STR_PAD_LEFT) . " | Próximo libre: " . str_pad((string) $sequence, 8, '0', STR_PAD_LEFT);
+                $localLastEmitted = Movement::query()
+                    ->where('branch_id', $branch->id)
+                    ->where('movement_type_id', 2)
+                    ->where('document_type_id', $docTypeId)
+                    ->where(function ($q) {
+                        $q->whereNotNull('electronic_invoice_external_id')
+                            ->orWhereNotNull('electronic_invoice_number');
+                    })
+                    ->pluck('number')
+                    ->map(fn ($n) => (int) preg_replace('/\D+/', '', (string) $n))
+                    ->max() ?? 0;
+
+                $sequence = max(1, $lastApiNum, $localLastEmitted > 0 ? $localLastEmitted + 1 : 1);
+
+                $unemittedMovements = Movement::query()
+                    ->where('branch_id', $branch->id)
+                    ->where('movement_type_id', 2)
+                    ->where('document_type_id', $docTypeId)
+                    ->whereNull('electronic_invoice_external_id')
+                    ->whereNull('electronic_invoice_number')
+                    ->orderBy('moved_at', 'asc')
+                    ->orderBy('created_at', 'asc')
+                    ->orderBy('id', 'asc')
+                    ->get();
+
+                $reorderedCount = 0;
+                $startSeq = $sequence;
+
+                foreach ($unemittedMovements as $m) {
+                    $padNum = str_pad((string) $sequence, 8, '0', STR_PAD_LEFT);
+                    if ($m->number !== $padNum) {
+                        $m->number = $padNum;
+                        $m->save();
+                        $reorderedCount++;
+                    }
+                    $sequence++;
+                }
+
+                $startPad = str_pad((string) $startSeq, 8, '0', STR_PAD_LEFT);
+                $endPad = str_pad((string) max($startSeq, $sequence - 1), 8, '0', STR_PAD_LEFT);
+                $summary[] = "{$docType?->name}: {$reorderedCount} comprobantes pendientes reordenados (Secuencia: {$startPad} a {$endPad})";
             }
         });
 
-        return response()->json(['success' => true, 'message' => 'Correlativos sincronizados con APISUNAT: ' . implode(' | ', $summary)]);
+        return response()->json(['success' => true, 'message' => 'Reorganización sin huecos realizada con éxito: ' . implode(' | ', $summary)]);
     }
 
     private function wrapEscPosPlainPayload(string $text): string
@@ -3963,4 +3979,5 @@ class SalesController extends Controller
             ], 500);
         }
     }
+
 }

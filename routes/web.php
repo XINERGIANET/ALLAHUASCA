@@ -151,7 +151,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/admin/ventas/{sale}/emitir-sunat', [SalesController::class, 'emitSingleSunat'])->name('sales.emit.sunat');
     Route::post('/admin/ventas/sincronizar-apisunat', [SalesController::class, 'syncApisunatCorrelatives'])->name('sales.sync.apisunat');
     Route::post('/admin/ventas/sincronizar-sunat', [SalesController::class, 'batchSyncSunat'])->name('sales.batch.sunat');
-    Route::post('/admin/ventas/reorganizar-correlativos', [SalesController::class, 'syncApisunatCorrelatives'])->name('sales.reorganize.correlatives');
+    Route::post('/admin/ventas/reorganizar-correlativos', [SalesController::class, 'reorganizeCorrelatives'])->name('sales.reorganize.correlatives');
     Route::get('/admin/ventas/{sale}/electronico/pdf-a4', [SalesController::class, 'redirectElectronicPdfA4'])->name('sales.electronic.pdf.a4');
     Route::get('/admin/ventas/{sale}/electronico/xml', [SalesController::class, 'redirectElectronicXml'])->name('sales.electronic.xml');
     Route::get('/admin/ventas/{sale}/electronico/cdr', [SalesController::class, 'redirectElectronicCdr'])->name('sales.electronic.cdr');
