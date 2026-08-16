@@ -31,22 +31,22 @@
         }
 
         .ticket {
-            width: 100%;
-            max-width: 100%;
-            padding: 2mm 3.5mm 4mm 3.5mm;
-            margin: 0 auto;
-            box-sizing: border-box;
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 2mm 1.5mm 4mm 1.5mm !important;
+            margin: 0 auto !important;
+            box-sizing: border-box !important;
             text-align: left;
             overflow: visible;
             page-break-inside: avoid;
             break-inside: avoid;
         }
 
-        /* Impresión térmica física automática: márgenes simétricos de 3mm para evitar recortes a la izquierda */
+        /* Impresión térmica física automática: expansión al 100% de la bobina de papel */
         body.thermal-print .ticket {
             width: 100% !important;
             max-width: 100% !important;
-            padding: 2mm 3mm 4mm 3mm !important;
+            padding: 2mm 1.5mm 4mm 1.5mm !important;
             margin: 0 auto !important;
             box-sizing: border-box !important;
         }
@@ -74,7 +74,7 @@
             .ticket {
                 width: 100% !important;
                 max-width: 100% !important;
-                padding: 5mm 4mm 6mm !important;
+                padding: 5mm 3mm 6mm !important;
             }
         }
 
@@ -97,6 +97,7 @@
         @media print {
             @page {
                 margin: 0;
+                size: 80mm auto;
             }
 
             html,
@@ -110,7 +111,7 @@
             .ticket {
                 width: 100% !important;
                 max-width: 100% !important;
-                padding: 2mm 3mm 4mm 3mm !important;
+                padding: 2mm 1.5mm 4mm 1.5mm !important;
                 margin: 0 auto !important;
                 box-sizing: border-box !important;
             }
@@ -222,43 +223,44 @@
         }
 
         .col-product {
-            width: 44%;
+            width: 40%;
             text-align: left;
-            padding-left: 0.35mm;
-            padding-right: 0.35mm;
+            padding-left: 0.2mm;
+            padding-right: 0.2mm;
             word-break: break-word;
             overflow-wrap: anywhere;
         }
 
         .col-qty {
-            width: 10%;
-            text-align: left;
+            width: 15%;
+            text-align: center;
             padding-left: 0;
-            padding-right: 0.35mm;
+            padding-right: 0.2mm;
         }
 
         .col-unit {
-            width: 20%;
+            width: 22%;
             text-align: right;
             padding-right: 0.2mm;
         }
 
         .col-measure {
+            width: 24%;
             text-align: center;
             white-space: nowrap;
             word-break: normal;
         }
 
-        .items-table.has-measure-column .col-product { width: 30%; }
-        .items-table.has-measure-column .col-qty { width: 12%; }
+        .items-table.has-measure-column .col-product { width: 20%; }
+        .items-table.has-measure-column .col-qty { width: 14%; }
         .items-table.has-measure-column .col-measure { width: 24%; }
-        .items-table.has-measure-column .col-unit { width: 17%; }
-        .items-table.has-measure-column .col-subtotal { width: 17%; }
+        .items-table.has-measure-column .col-unit { width: 20%; }
+        .items-table.has-measure-column .col-subtotal { width: 22%; }
 
         .col-subtotal {
-            width: 20%;
+            width: 23%;
             text-align: right;
-            padding-right: 0.5mm;
+            padding-right: 0;
         }
 
         .totals-table {
@@ -628,6 +630,22 @@
     <div class="separator"></div>
 
     <table class="items-table{{ $showUnitColumn ? ' has-measure-column' : '' }}">
+        @if($showUnitColumn)
+            <colgroup>
+                <col class="col-product">
+                <col class="col-qty">
+                <col class="col-measure">
+                <col class="col-unit">
+                <col class="col-subtotal">
+            </colgroup>
+        @else
+            <colgroup>
+                <col class="col-product">
+                <col class="col-qty">
+                <col class="col-unit">
+                <col class="col-subtotal">
+            </colgroup>
+        @endif
         <thead>
         <tr class="header-row">
             <th class="col-product"><strong>Prod.</strong></th>
@@ -670,7 +688,7 @@
                 <td colspan="{{ $showUnitColumn ? 5 : 4 }}">{{ $detail->description ?? $detail->product?->description ?? '-' }}</td>
             </tr>
             <tr class="item-values">
-                <td class="col-product"></td>
+                <td class="col-product">&nbsp;</td>
                 <td class="col-qty">{{ number_format($qty, 2) }}</td>
                 @if($showUnitColumn)
                     <td class="col-measure">{{ $detail->unit?->description ?: '-' }}</td>
