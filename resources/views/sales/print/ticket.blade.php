@@ -13,14 +13,14 @@
 
         @page {
             size: {{ (int) ($ticketPageWidthMm ?? 80) }}mm auto;
-            margin: 0;
+            margin: 0 !important;
         }
 
         html,
         body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
             background: #fff;
         }
 
@@ -30,25 +30,26 @@
         }
 
         .ticket {
-            width: 90%;
-            max-width: 90%;
-            padding: 2.2mm 1.2mm 3mm;
-            margin-left: 0;
-            margin-right: auto;
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 2mm 1.5mm 4mm 1.5mm !important;
+            margin: 0 auto !important;
+            box-sizing: border-box !important;
             overflow: visible;
         }
 
         body.thermal-print .ticket {
-            width: calc(90% - 2mm);
-            max-width: calc(90% - 2mm);
-            padding-left: 0;
-            padding-right: 2mm;
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 2mm 1.5mm 4mm 1.5mm !important;
+            margin: 0 auto !important;
+            box-sizing: border-box !important;
         }
 
         @media screen {
             body {
-                width: {{ (int) ($ticketPageWidthMm ?? 80) }}mm;
-                max-width: {{ (int) ($ticketPageWidthMm ?? 80) }}mm;
+                width: {{ (int) ($ticketPageWidthMm ?? 80) }}mm !important;
+                max-width: {{ (int) ($ticketPageWidthMm ?? 80) }}mm !important;
             }
         }
 
@@ -69,6 +70,26 @@
         }
 
         @media print {
+            @page {
+                size: {{ (int) ($ticketPageWidthMm ?? 80) }}mm auto;
+                margin: 0 !important;
+            }
+
+            html,
+            body {
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            .ticket {
+                width: 100% !important;
+                max-width: 100% !important;
+                padding: 2mm 1.5mm 4mm 1.5mm !important;
+                margin: 0 auto !important;
+                box-sizing: border-box !important;
+            }
+
             .logo {
                 -webkit-filter: grayscale(1) brightness(0);
                 filter: grayscale(1) brightness(0);
@@ -99,12 +120,13 @@
         .separator {
             margin: 1.8mm 0;
             height: 0;
+            border-bottom: 1px dashed #000;
         }
 
         table {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
+            width: 100% !important;
+            border-collapse: collapse !important;
+            table-layout: fixed !important;
         }
 
         .info-table td {
@@ -164,48 +186,49 @@
         }
 
         .col-product {
-            width: 44%;
+            width: 20% !important;
             text-align: left;
-            padding-left: 0.35mm;
-            padding-right: 0.35mm;
+            padding-left: 0.2mm;
+            padding-right: 0.2mm;
             word-break: break-word;
             overflow-wrap: anywhere;
         }
 
         .col-qty {
-            width: 10%;
-            text-align: left;
+            width: 14% !important;
+            text-align: center;
             padding-left: 0;
-            padding-right: 0.35mm;
+            padding-right: 0.2mm;
         }
 
         .col-unit {
-            width: 20%;
+            width: 20% !important;
             text-align: right;
             padding-right: 0.2mm;
         }
 
         .col-measure {
+            width: 24% !important;
             text-align: center;
             white-space: nowrap;
             word-break: normal;
         }
 
-        .items-table.has-measure-column .col-product { width: 18%; }
-        .items-table.has-measure-column .col-qty { width: 12%; }
-        .items-table.has-measure-column .col-measure { width: 28%; }
-        .items-table.has-measure-column .col-unit { width: 20%; }
-        .items-table.has-measure-column .col-subtotal { width: 22%; }
+        .items-table.has-measure-column .col-product { width: 20% !important; }
+        .items-table.has-measure-column .col-qty { width: 14% !important; }
+        .items-table.has-measure-column .col-measure { width: 24% !important; }
+        .items-table.has-measure-column .col-unit { width: 20% !important; }
+        .items-table.has-measure-column .col-subtotal { width: 22% !important; }
 
         .col-subtotal {
-            width: 26%;
-            text-align: right;
-            padding-right: 0;
+            width: 22% !important;
+            text-align: right !important;
+            padding-right: 0 !important;
         }
 
         .totals-table {
-            table-layout: fixed;
-            width: 100%;
+            table-layout: fixed !important;
+            width: 100% !important;
         }
 
         .totals-table td {
@@ -215,15 +238,16 @@
         }
 
         .totals-label {
-            width: 52%;
+            width: 50% !important;
             font-weight: 700;
             padding-right: 1mm;
         }
 
         .totals-value {
-            width: 48%;
-            text-align: right;
+            width: 50% !important;
+            text-align: right !important;
             white-space: nowrap;
+            padding-right: 0 !important;
             font-variant-numeric: tabular-nums;
         }
 
@@ -244,12 +268,11 @@
 
         /* Rollo 58 mm */
         body.ticket-paper-58 .ticket {
-            padding: 1.8mm 1mm 2.5mm;
+            padding: 1.8mm 1mm 2.5mm !important;
         }
 
         body.ticket-paper-58.thermal-print .ticket {
-            padding-left: 0;
-            padding-right: 2mm;
+            padding: 1.8mm 1mm 2.5mm !important;
         }
 
         body.ticket-paper-58 .items-table th,
@@ -258,16 +281,16 @@
             padding: 0.35mm 0.1mm;
         }
 
-        body.ticket-paper-58 .col-qty { width: 9%; }
-        body.ticket-paper-58 .col-product { width: 42%; padding-left: 0.35mm; padding-right: 0.2mm; }
-        body.ticket-paper-58 .col-unit { width: 21%; }
-        body.ticket-paper-58 .col-subtotal { width: 28%; }
+        body.ticket-paper-58 .col-qty { width: 12% !important; }
+        body.ticket-paper-58 .col-product { width: 20% !important; }
+        body.ticket-paper-58 .col-unit { width: 20% !important; }
+        body.ticket-paper-58 .col-subtotal { width: 24% !important; }
 
-        body.ticket-paper-58 .items-table.has-measure-column .col-product { width: 14%; }
-        body.ticket-paper-58 .items-table.has-measure-column .col-qty { width: 12%; }
-        body.ticket-paper-58 .items-table.has-measure-column .col-measure { width: 30%; }
-        body.ticket-paper-58 .items-table.has-measure-column .col-unit { width: 20%; }
-        body.ticket-paper-58 .items-table.has-measure-column .col-subtotal { width: 24%; }
+        body.ticket-paper-58 .items-table.has-measure-column .col-product { width: 14% !important; }
+        body.ticket-paper-58 .items-table.has-measure-column .col-qty { width: 12% !important; }
+        body.ticket-paper-58 .items-table.has-measure-column .col-measure { width: 30% !important; }
+        body.ticket-paper-58 .items-table.has-measure-column .col-unit { width: 20% !important; }
+        body.ticket-paper-58 .items-table.has-measure-column .col-subtotal { width: 24% !important; }
 
         body.ticket-paper-58 .info-label { width: 17mm; font-size: 2.75mm; }
         body.ticket-paper-58 .info-table td { font-size: 2.65mm; }
@@ -293,6 +316,7 @@
         body.thermal-print .notes { font-size: 3.25mm; }
         body.thermal-print .footer { font-size: 3mm; }
         body.thermal-print .thanks { font-size: 3.25mm; }
+
         .dash-row td {
             height: 3mm;
             padding: 0;
@@ -392,7 +416,13 @@
     if (!empty($sale->electronic_invoice_series) && preg_match('/^[A-Z]+(\d+)$/i', (string) $sale->electronic_invoice_series, $seriesMatches) === 1) {
         $ticketSeries = $seriesMatches[1];
     }
-    $docCode = strtoupper(substr($sale->documentType?->name ?? 'T', 0, 1)) . $ticketSeries . '-' . $sale->number;
+    $cleanNum = (string) $sale->number;
+    if (strlen($cleanNum) > 8 && str_starts_with($cleanNum, '100')) {
+        $cleanNum = str_pad((string) (int) substr($cleanNum, 1), 8, '0', STR_PAD_LEFT);
+    } else {
+        $cleanNum = str_pad((string) (int) preg_replace('/\D+/', '', $cleanNum), 8, '0', STR_PAD_LEFT);
+    }
+    $docCode = strtoupper(substr($sale->documentType?->name ?? 'T', 0, 1)) . $ticketSeries . '-' . $cleanNum;
     $ticketSubtotal = (float) ($sale->salesMovement?->subtotal ?? $sale->orderMovement?->subtotal ?? 0);
     $ticketTax = (float) ($sale->salesMovement?->tax ?? $sale->orderMovement?->tax ?? 0);
     $ticketTotal = (float) ($sale->salesMovement?->total ?? $sale->orderMovement?->total ?? 0);
@@ -457,6 +487,15 @@
     <div class="separator"></div>
 
     <table class="items-table{{ $showUnitColumn ? ' has-measure-column' : '' }}">
+        <colgroup>
+            <col class="col-product">
+            <col class="col-qty">
+            @if($showUnitColumn)
+                <col class="col-measure">
+            @endif
+            <col class="col-unit">
+            <col class="col-subtotal">
+        </colgroup>
         <thead>
         <tr class="dash-row">
             <th colspan="{{ $showUnitColumn ? 5 : 4 }}">------------------------------------------------------------</th>
@@ -485,7 +524,7 @@
                 <td colspan="{{ $showUnitColumn ? 5 : 4 }}">{{ $detail->description ?? $detail->product?->description ?? '-' }}</td>
             </tr>
             <tr class="item-values">
-                <td class="col-product"></td>
+                <td class="col-product">&nbsp;</td>
                 <td class="col-qty">{{ number_format($qty, 2) }}</td>
                 @if($showUnitColumn)
                     <td class="col-measure">{{ $detail->unit?->description ?: '-' }}</td>
