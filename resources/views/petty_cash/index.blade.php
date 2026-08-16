@@ -246,7 +246,7 @@
                             <div class="col-span-1 md:col-span-3">
                                 <label class="{{ $labelFilterClass }}">Turno</label>
                                 <select name="cash_shift_relation_id" class="{{ $selectFilterClass }}">
-                                    <option value="">Todos</option>
+                                    <option value="all" @selected(($selectedCashShiftRelationId ?? '') === 'all' || ($selectedCashShiftRelationId ?? '') === '')>Todos</option>
                                     @foreach ($cashShiftSessions ?? [] as $csr)
                                         @php
                                             $shiftName = $csr->cashMovementStart?->shift?->name ?? 'Turno';
@@ -255,7 +255,7 @@
                                             $statusLabel = $csrStatus === '1' ? 'En curso' : 'Cerrado';
                                             $csrLabel = $shiftName . ($started ? ' | ' . $started : '') . ' (' . $statusLabel . ')';
                                         @endphp
-                                        <option value="{{ $csr->id }}" @selected((int) ($selectedCashShiftRelationId ?? 0) === (int) $csr->id)>
+                                        <option value="{{ $csr->id }}" @selected((string) ($selectedCashShiftRelationId ?? '') === (string) $csr->id)>
                                             {{ $csrLabel }}
                                         </option>
                                     @endforeach
@@ -267,7 +267,7 @@
                         <div class="grid grid-cols-1 gap-3 md:grid-cols-12 md:items-end md:gap-4">
                             <div class="col-span-1 md:col-span-3">
                                 <x-form.select.combobox :options="$paymentConceptFilterOptions" label="Concepto de pago"
-                                    name="payment_concept_id" x-on:click="clear()" :value="$selectedPaymentConceptFilterId"
+                                    name="payment_concept_id" :clearable="true" :value="$selectedPaymentConceptFilterId"
                                     displayField="description" placeholder="Seleccione concepto" />
                             </div>
                             <div class="col-span-1 md:col-span-3">
@@ -482,6 +482,34 @@
                                     </td>
                                     <td class="px-6 py-3 align-middle">
                                         <div class="flex items-center justify-end gap-2">
+                                            @php
+                                                $relatedSaleId = null;
+                                                if (($movement->movement_type_id ?? 0) == 2) {
+                                                    $relatedSaleId = $movement->id;
+                                                } elseif (!empty($movement->parent_movement_id)) {
+                                                    $relatedSaleId = $movement->parent_movement_id;
+                                                } elseif ($movement->cashMovement?->movement_id && ($movement->cashMovement?->movement?->movement_type_id ?? 0) == 2) {
+                                                    $relatedSaleId = $movement->cashMovement->movement_id;
+                                                }
+                                                $conceptNameLower = mb_strtolower((string) ($conceptName ?? ''), 'UTF-8');
+                                                $isPagoCliente = str_contains($conceptNameLower, 'pago de cliente') || str_contains($conceptNameLower, 'cobro') || str_contains($conceptNameLower, 'venta');
+                                            @endphp
+                                            @if ($relatedSaleId || $isPagoCliente)
+                                                @if ($relatedSaleId)
+                                                    <div class="relative group">
+                                                        <a href="{{ route('sales.show', ['sale' => $relatedSaleId, 'view_id' => $viewId]) }}" target="_blank"
+                                                            class="inline-flex h-9 items-center gap-1.5 rounded-xl bg-indigo-600 px-3 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 whitespace-nowrap"
+                                                            title="Ver detalle completo de la venta">
+                                                            <i class="ri-eye-line text-sm"></i>
+                                                            <span>Ver Venta</span>
+                                                        </a>
+                                                        <span
+                                                            class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100 z-50">
+                                                            Ver Detalle de Venta
+                                                        </span>
+                                                    </div>
+                                                @endif
+                                            @endif
                                             @if ($rowOperations->isNotEmpty())
                                                 @foreach ($rowOperations as $operation)
                                                     @php

@@ -115,7 +115,7 @@ class SalesController extends Controller
         $cashShiftRelationId = $request->input('cash_shift_relation_id');
         $saleType = $request->input('sale_type');
         $perPage = (int) $request->input('per_page', 10);
-        $allowedPerPage = [10, 20, 50, 100, 200];
+        $allowedPerPage = [10, 20, 50, 100, 200, 500];
         if (! in_array($perPage, $allowedPerPage, true)) {
             $perPage = 10;
         }
@@ -392,6 +392,32 @@ class SalesController extends Controller
     public function reportSales(Request $request)
     {
         return $this->index($request);
+    }
+
+    /**
+     * Vista de detalle completo de una venta ("Ver Venta").
+     */
+    public function show(Request $request, Movement $sale)
+    {
+        $sale->loadMissing([
+            'branch',
+            'person',
+            'responsibleUser.person',
+            'movementType',
+            'documentType',
+            'salesMovement.details.product',
+            'salesMovement.details.taxRate',
+            'salesMovement.paymentMethod',
+            'cashMovement.details',
+            'cashMovement.paymentConcept',
+            'cashMovement.shift',
+            'orderMovement.table',
+            'parentMovement',
+        ]);
+
+        $viewId = $request->input('view_id');
+
+        return view('sales.show', compact('sale', 'viewId'));
     }
 
     // Obtener caja desde sesión
