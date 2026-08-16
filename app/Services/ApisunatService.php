@@ -379,6 +379,11 @@ class ApisunatService
 
         $dates = $this->resolveSunatIssueDate($sale);
 
+        $supplierAddress = trim((string) ($branch?->address ?? ''));
+        if ($supplierAddress === '' || $supplierAddress === '-') {
+            $supplierAddress = 'AV. PRINCIPAL S/N - CHICLAYO';
+        }
+
         $documentBody = [
             'cbc:UBLVersionID' => ['_text' => '2.1'],
             'cbc:CustomizationID' => ['_text' => '2.0'],
@@ -404,7 +409,7 @@ class ApisunatService
                         'cac:RegistrationAddress' => [
                             'cbc:AddressTypeCode' => ['_text' => '0000'],
                             'cac:AddressLine' => [
-                                'cbc:Line' => ['_text' => trim((string) ($branch?->address ?? '-'))],
+                                'cbc:Line' => ['_text' => $supplierAddress],
                             ],
                         ],
                     ],
