@@ -38,6 +38,8 @@
             box-sizing: border-box;
             text-align: left;
             overflow: visible;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         /* La ticketera tiene menos ancho imprimible que el rollo: desplaza el
@@ -705,11 +707,12 @@
     @endif
 
     @if(!empty($qrImageUrl))
-        <div class="qr-dash"></div>
-        <div class="qr-wrap">
-            <img src="{{ $qrImageUrl }}" alt="QR del comprobante" style="width: 28mm; height: 28mm; display: block; margin: 1.5mm auto;">
+        <div class="separator"></div>
+        <div class="qr-dash">------------------------------------------------------------</div>
+        <div class="qr-wrap" style="text-align: center; margin: 2mm 0;">
+            <img src="{{ $qrImageUrl }}" alt="QR del comprobante" style="width: 32mm; height: 32mm; display: block; margin: 0 auto;">
         </div>
-        <div class="qr-dash"></div>
+        <div class="qr-dash">------------------------------------------------------------</div>
     @endif
 
     @if(!empty($ticketFooterMeta))

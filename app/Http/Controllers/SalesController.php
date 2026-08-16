@@ -1879,13 +1879,12 @@ class SalesController extends Controller
             $notesLines = max(1, (int) ceil(mb_strlen((string) $sale->comment) / 26));
         }
 
-        $baseHeight = 120;
+        $baseHeight = 150;
         $itemsHeight = $detailLines * 10;
-        $metaHeight = ($customerNameLines + $addressLines + $documentLines + $paymentLines + $creditNoteLines) * 6;
-        $notesHeight = $notesLines * 6;
-        $footerSafety = 60;
+        $qrHeight = 65;
+        $footerSafety = 45;
 
-        $height = max(200, min(1200, $baseHeight + $itemsHeight + $metaHeight + $notesHeight + $footerSafety));
+        $height = max(200, min(1200, $baseHeight + $itemsHeight + $qrHeight + $footerSafety));
 
         return $height.'mm';
     }
@@ -2469,7 +2468,18 @@ class SalesController extends Controller
             return null;
         }
 
-        return \App\Support\QrCodeGenerator::generateSvgDataUri($payload, 180);
+        $remoteUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=170x170&margin=0&data='.rawurlencode($payload);
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::timeout(5)->get($remoteUrl);
+            if ($response->successful() && strlen($response->body()) > 100) {
+                return 'data:image/png;base64,'.base64_encode($response->body());
+            }
+        } catch (\Throwable $e) {
+            // fallback a la URL si falla la conexión
+        }
+
+        return $remoteUrl;
     }
 
     /**
