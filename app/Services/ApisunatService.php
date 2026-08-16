@@ -120,6 +120,7 @@ class ApisunatService
         $catalog = $this->resolveDocumentCatalog($sale, $config);
         $customerDocument = $this->resolveCustomerDocument($sale, $catalog['type']);
         $customerDocType = $this->resolveCustomerDocumentType($customerDocument, $catalog['type']);
+        $totals = $this->resolveMovementTotals($sale);
         $apiUrl = $this->resolveApiUrl($config);
         $localNum = (int) preg_replace('/\D+/', '', (string) $sale->number);
 
