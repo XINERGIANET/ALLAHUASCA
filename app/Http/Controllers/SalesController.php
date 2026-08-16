@@ -1816,38 +1816,43 @@ class SalesController extends Controller
     {
         $sale = $this->resolvePrintableForTicket($sale);
         $printData = $this->buildSalePrintData($sale, $request);
-        $printData['autoPrint'] = $request->boolean('direct_print', false);
 
-        if ($request->boolean('pdf')) {
-            $html = view('sales.print.ticket', array_merge($printData, ['autoPrint' => false]))->render();
-            $pageHeight = $this->estimateSaleTicketHeight($sale);
-            $pdfBinary = $this->renderPdfWithWkhtmltopdf($html, null, [
-                '--page-width',
-                '80mm',
-                '--page-height',
-                $pageHeight,
-                '--margin-top',
-                '0',
-                '--margin-right',
-                '0',
-                '--margin-bottom',
-                '0',
-                '--margin-left',
-                '0',
-                '--print-media-type',
-                '--disable-smart-shrinking',
-                '--dpi',
-                '203',
+        if ($request->boolean('direct_print')) {
+            $printData['autoPrint'] = true;
+
+            return view('sales.print.ticket', $printData);
+        }
+
+        $printData['autoPrint'] = false;
+        $html = view('sales.print.ticket', $printData)->render();
+        $pageHeight = $this->estimateSaleTicketHeight($sale);
+
+        $pdfBinary = $this->renderPdfWithWkhtmltopdf($html, null, [
+            '--page-width',
+            '80mm',
+            '--page-height',
+            $pageHeight,
+            '--margin-top',
+            '0',
+            '--margin-right',
+            '0',
+            '--margin-bottom',
+            '0',
+            '--margin-left',
+            '0',
+            '--print-media-type',
+            '--disable-smart-shrinking',
+            '--dpi',
+            '203',
+        ]);
+
+        if ($pdfBinary !== null) {
+            $docName = strtoupper(substr($sale->documentType?->name ?? 'T', 0, 1)).$this->ticketSeriesForMovement($sale).'-'.$sale->number;
+
+            return response($pdfBinary, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="'.$docName.'-ticket.pdf"',
             ]);
-
-            if ($pdfBinary !== null) {
-                $docName = strtoupper(substr($sale->documentType?->name ?? 'T', 0, 1)).$this->ticketSeriesForMovement($sale).'-'.$sale->number;
-
-                return response($pdfBinary, 200, [
-                    'Content-Type' => 'application/pdf',
-                    'Content-Disposition' => 'inline; filename="'.$docName.'-ticket.pdf"',
-                ]);
-            }
         }
 
         return view('sales.print.ticket', $printData);
@@ -1874,13 +1879,13 @@ class SalesController extends Controller
             $notesLines = max(1, (int) ceil(mb_strlen((string) $sale->comment) / 26));
         }
 
-        $baseHeight = 106;
-        $itemsHeight = $detailLines * 8;
-        $metaHeight = ($customerNameLines + $addressLines + $documentLines + $paymentLines + $creditNoteLines) * 4;
-        $notesHeight = $notesLines * 5;
-        $footerSafety = 80;
+        $baseHeight = 120;
+        $itemsHeight = $detailLines * 10;
+        $metaHeight = ($customerNameLines + $addressLines + $documentLines + $paymentLines + $creditNoteLines) * 6;
+        $notesHeight = $notesLines * 6;
+        $footerSafety = 60;
 
-        $height = max(220, min(1200, $baseHeight + $itemsHeight + $metaHeight + $notesHeight + $footerSafety));
+        $height = max(200, min(1200, $baseHeight + $itemsHeight + $metaHeight + $notesHeight + $footerSafety));
 
         return $height.'mm';
     }
