@@ -250,10 +250,10 @@
                                     @foreach ($cashShiftSessions ?? [] as $csr)
                                         @php
                                             $shiftName = $csr->cashMovementStart?->shift?->name ?? 'Turno';
-                                            $started = $csr->started_at ? \Illuminate\Support\Carbon::parse($csr->started_at)->format('d/m H:i') : '';
+                                            $started = $csr->started_at ? \Illuminate\Support\Carbon::parse($csr->started_at)->format('Y-m-d H:i:s') : '';
                                             $csrStatus = (string) ($csr->status ?? '');
                                             $statusLabel = $csrStatus === '1' ? 'En curso' : 'Cerrado';
-                                            $csrLabel = $shiftName . ($started ? ' ' . $started : '') . ' (' . $statusLabel . ')';
+                                            $csrLabel = $shiftName . ($started ? ' | ' . $started : '') . ' (' . $statusLabel . ')';
                                         @endphp
                                         <option value="{{ $csr->id }}" @selected((string) ($selectedCashShiftRelationId ?? '') === (string) $csr->id)>
                                             {{ $csrLabel }}

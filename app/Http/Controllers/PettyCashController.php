@@ -270,6 +270,7 @@ class PettyCashController extends Controller
             'conceptsIngreso' => $conceptsIngreso,
             'conceptsEgreso' => $conceptsEgreso,
             'selectedBoxId' => $selectedBoxId,
+            'cashShiftSessions' => $cashShiftSessions,
             'shifts' => $shifts,
             'paymentMethods' => $paymentMethods,
             'paymentGateways' => $paymentGateways,
