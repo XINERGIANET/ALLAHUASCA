@@ -246,14 +246,14 @@
                             <div class="col-span-1 md:col-span-3">
                                 <label class="{{ $labelFilterClass }}">Turno</label>
                                 <select name="cash_shift_relation_id" class="{{ $selectFilterClass }}">
-                                    <option value="all" @selected(($selectedCashShiftRelationId ?? '') === 'all' || ($selectedCashShiftRelationId ?? '') === '')>Todos</option>
+                                    <option value="">Todos</option>
                                     @foreach ($cashShiftSessions ?? [] as $csr)
                                         @php
                                             $shiftName = $csr->cashMovementStart?->shift?->name ?? 'Turno';
-                                            $started = $csr->started_at ? \Illuminate\Support\Carbon::parse($csr->started_at)->format('Y-m-d H:i:s') : '';
+                                            $started = $csr->started_at ? \Illuminate\Support\Carbon::parse($csr->started_at)->format('d/m H:i') : '';
                                             $csrStatus = (string) ($csr->status ?? '');
                                             $statusLabel = $csrStatus === '1' ? 'En curso' : 'Cerrado';
-                                            $csrLabel = $shiftName . ($started ? ' | ' . $started : '') . ' (' . $statusLabel . ')';
+                                            $csrLabel = $shiftName . ($started ? ' ' . $started : '') . ' (' . $statusLabel . ')';
                                         @endphp
                                         <option value="{{ $csr->id }}" @selected((string) ($selectedCashShiftRelationId ?? '') === (string) $csr->id)>
                                             {{ $csrLabel }}
@@ -266,14 +266,26 @@
                         {{-- Fila 2: Concepto + Tipo movimiento + Desde + Hasta + Botones --}}
                         <div class="grid grid-cols-1 gap-3 md:grid-cols-12 md:items-end md:gap-4">
                             <div class="col-span-1 md:col-span-3">
-                                <x-form.select.combobox :options="$paymentConceptFilterOptions" label="Concepto de pago"
-                                    name="payment_concept_id" :clearable="true" :value="$selectedPaymentConceptFilterId"
-                                    displayField="description" placeholder="Seleccione concepto" />
+                                <label class="{{ $labelFilterClass }}">Concepto de pago</label>
+                                <select name="payment_concept_id" class="{{ $selectFilterClass }}">
+                                    <option value="">Todos los conceptos</option>
+                                    @foreach ($paymentConceptFilterOptions ?? [] as $concept)
+                                        <option value="{{ $concept->id }}" @selected((int) ($selectedPaymentConceptFilterId ?? 0) === (int) $concept->id)>
+                                            {{ $concept->description }} ({{ $concept->type === 'I' ? 'Ingreso' : 'Egreso' }})
+                                        </option>
+                                    @endforeach
+                                </select>
                             </div>
                             <div class="col-span-1 md:col-span-3">
-                                <x-form.select.combobox :options="$documentTypeFilterOptions" label="Tipo de movimiento"
-                                    name="document_type_id" x-on:click="clear()" :value="$selectedDocumentTypeId"
-                                    displayField="name" placeholder="Seleccione tipo" />
+                                <label class="{{ $labelFilterClass }}">Tipo de movimiento</label>
+                                <select name="document_type_id" class="{{ $selectFilterClass }}">
+                                    <option value="">Todos los tipos</option>
+                                    @foreach ($documentTypeFilterOptions ?? [] as $dt)
+                                        <option value="{{ $dt->id }}" @selected((int) ($selectedDocumentTypeId ?? 0) === (int) $dt->id)>
+                                            {{ $dt->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
                             </div>
                             <div class="col-span-1 md:col-span-2">
                                 <label class="{{ $labelFilterClass }}">Desde</label>
