@@ -122,27 +122,58 @@ class ApisunatService
         $customerDocType = $this->resolveCustomerDocumentType($customerDocument, $catalog['type']);
         $totals = $this->resolveMovementTotals($sale);
         $apiUrl = $this->resolveApiUrl($config);
-        $localNum = (int) preg_replace('/\D+/', '', (string) $sale->number);
 
-        if ($localNum > 0) {
-            $targetNum = $localNum;
-        } else {
-            $apiLastNum = 0;
-            $correlativeResp = Http::timeout(10)->post($apiUrl.'/personas/lastDocument', [
-                'personaId' => (string) $config->persona_id,
-                'personaToken' => (string) $config->persona_token,
-                'type' => $catalog['type'],
-                'serie' => $catalog['serie'],
-            ]);
+        // 1. Obtener todos los correlativos locales ya emitidos electrónicamente
+        $usedNumbers = Movement::query()
+            ->where('branch_id', $sale->branch_id)
+            ->where('document_type_id', $sale->document_type_id)
+            ->where('movement_type_id', 2)
+            ->whereNotNull('electronic_invoice_external_id')
+            ->pluck('number')
+            ->map(fn ($n) => (int) preg_replace('/\D+/', '', (string) $n))
+            ->filter(fn ($n) => $n > 0)
+            ->toArray();
 
-            if ($correlativeResp->successful()) {
-                $obj = $correlativeResp->object();
-                $sug = (int) data_get($obj, 'suggestedNumber', 0);
-                $last = (int) data_get($obj, 'lastNumber', 0);
-                $apiLastNum = max($sug, $last);
+        $usedSet = array_flip($usedNumbers);
+
+        // 2. Consultar el último número emitido en APISUNAT
+        $apiLastNum = 0;
+        $correlativeResp = Http::timeout(20)->post($apiUrl.'/personas/lastDocument', [
+            'personaId' => (string) $config->persona_id,
+            'personaToken' => (string) $config->persona_token,
+            'type' => $catalog['type'],
+            'serie' => $catalog['serie'],
+        ]);
+
+        if ($correlativeResp->successful()) {
+            $obj = $correlativeResp->object();
+            $sug = (int) data_get($obj, 'suggestedNumber', 0);
+            $last = (int) data_get($obj, 'lastNumber', 0);
+            $apiLastNum = max($sug, $last);
+        }
+
+        // 3. Buscar el primer hueco previo sin emitir entre 1 y apiLastNum
+        $firstGap = null;
+        if ($apiLastNum > 0) {
+            for ($i = 1; $i <= $apiLastNum; $i++) {
+                if (! isset($usedSet[$i])) {
+                    $firstGap = $i;
+                    break;
+                }
             }
+        }
 
-            $targetNum = $apiLastNum > 0 ? $apiLastNum + 1 : 1;
+        // 4. Determinación estricta del correlativo para APISUNAT
+        if ($firstGap !== null) {
+            $targetNum = $firstGap;
+        } elseif ($apiLastNum > 0) {
+            $targetNum = $apiLastNum + 1;
+        } else {
+            $candidate = 1;
+            while (isset($usedSet[$candidate])) {
+                $candidate++;
+            }
+            $targetNum = $candidate;
         }
 
         $attempts = 0;
@@ -150,14 +181,13 @@ class ApisunatService
         $number = '';
         $fileName = '';
 
-        $attempts = 0;
-        $sendResp = null;
-        $number = '';
-        $fileName = '';
-
-        // Bucle de reintento por numeración repetida consultando el último número de APISUNAT
-        while ($attempts < 10) {
+        // Bucle de reintento automático por numeración repetida
+        while ($attempts < 5) {
             $attempts++;
+            while (isset($usedSet[$targetNum])) {
+                $targetNum++;
+            }
+
             $number = str_pad((string) $targetNum, 8, '0', STR_PAD_LEFT);
             $fileName = trim((string) ($branch?->ruc ?? '0')).'-'.$catalog['type'].'-'.$catalog['serie'].'-'.$number;
             $documentBody = $this->buildDocumentBody($sale, $catalog, $customerDocument, $customerDocType, $totals, $number);
@@ -179,22 +209,8 @@ class ApisunatService
                 ?: $sendResp->body();
 
             if (str_contains(mb_strtolower($errorMessage, 'UTF-8'), 'repetida') || str_contains(mb_strtolower($errorMessage, 'UTF-8'), 'ya existe')) {
-                // Obtener inmediatamente el próximo correlativo libre de APISUNAT
-                $apiNextNum = 0;
-                $correlativeResp = Http::timeout(10)->post($apiUrl.'/personas/lastDocument', [
-                    'personaId' => (string) $config->persona_id,
-                    'personaToken' => (string) $config->persona_token,
-                    'type' => $catalog['type'],
-                    'serie' => $catalog['serie'],
-                ]);
-                if ($correlativeResp->successful()) {
-                    $obj = $correlativeResp->object();
-                    $sug = (int) data_get($obj, 'suggestedNumber', 0);
-                    $last = (int) data_get($obj, 'lastNumber', 0);
-                    $apiNextNum = $sug > 0 ? $sug : ($last > 0 ? $last + 1 : 1);
-                }
-
-                $targetNum = max($targetNum + 1, $apiNextNum);
+                $usedSet[$targetNum] = true;
+                $targetNum++;
                 continue;
             }
 

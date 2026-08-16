@@ -30,11 +30,10 @@
         }
 
         .ticket {
-            width: 90%;
-            max-width: 90%;
+            width: 92%;
+            max-width: 92%;
             padding: 2.2mm 1.2mm 3mm;
-            margin-left: 0;
-            margin-right: auto;
+            margin: 0 auto;
             overflow: visible;
         }
 
