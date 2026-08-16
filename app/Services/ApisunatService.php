@@ -452,9 +452,9 @@ class ApisunatService
                 continue;
             }
 
-            $taxPercent = $defaultTaxPercent > 0 ? $defaultTaxPercent : 18.0;
-            $taxFactor = $taxPercent / 100;
-            $lineSubtotal = round($taxFactor > 0 ? ($lineTotal / (1 + $taxFactor)) : $lineTotal, 2);
+            $taxPercent = 18.0;
+            $taxFactor = 0.18;
+            $lineSubtotal = round($lineTotal / (1 + $taxFactor), 2);
             $lineIgv = round($lineTotal - $lineSubtotal, 2);
             $grossUnitPrice = round($lineTotal / $billableQty, 2);
             $unitValue = round($lineSubtotal / $billableQty, 2);
@@ -502,7 +502,7 @@ class ApisunatService
                             '_text' => $lineIgv,
                         ],
                         'cac:TaxCategory' => [
-                            'cbc:Percent' => ['_text' => round($taxPercent, 2)],
+                            'cbc:Percent' => ['_text' => 18],
                             'cbc:TaxExemptionReasonCode' => ['_text' => '10'],
                             'cac:TaxScheme' => [
                                 'cbc:ID' => ['_text' => '1000'],
@@ -555,7 +555,7 @@ class ApisunatService
                     '_text' => $headerTax,
                 ],
                 'cac:TaxCategory' => [
-                    'cbc:Percent' => ['_text' => round($defaultTaxPercent > 0 ? $defaultTaxPercent : 18.0, 2)],
+                    'cbc:Percent' => ['_text' => 18],
                     'cac:TaxScheme' => [
                         'cbc:ID' => ['_text' => '1000'],
                         'cbc:Name' => ['_text' => 'IGV'],
@@ -590,19 +590,17 @@ class ApisunatService
             throw new \RuntimeException('No se puede emitir electrónicamente: el comprobante no tiene líneas válidas para SUNAT.');
         }
 
-        // Armonización y validación SUNAT (Regla 3462): La tasa del IGV debe ser idéntica en todas las líneas del comprobante
-        $firstGravadoPercent = null;
+        // Armonización y validación SUNAT (Regla 3462): La tasa del IGV debe ser idéntica a la vigencial (18) en todas las líneas del comprobante
         foreach ($lines as &$line) {
             $taxReasonCode = trim((string) data_get($line, 'cac:TaxTotal.cac:TaxSubtotal.0.cac:TaxCategory.cbc:TaxExemptionReasonCode._text', '10'));
             if ($taxReasonCode === '10') {
-                $linePercent = (float) data_get($line, 'cac:TaxTotal.cac:TaxSubtotal.0.cac:TaxCategory.cbc:Percent._text', 18.0);
-                if ($firstGravadoPercent === null) {
-                    $firstGravadoPercent = $linePercent > 0 ? $linePercent : 18.0;
-                }
-                data_set($line, 'cac:TaxTotal.cac:TaxSubtotal.0.cac:TaxCategory.cbc:Percent._text', round($firstGravadoPercent, 2));
+                data_set($line, 'cac:TaxTotal.cac:TaxSubtotal.0.cac:TaxCategory.cbc:Percent._text', 18);
             }
         }
         unset($line);
+
+        // Cabecera del IGV obligatoria al 18% para SUNAT 3462
+        data_set($documentBody, 'cac:TaxTotal.cac:TaxSubtotal.0.cac:TaxCategory.cbc:Percent._text', 18);
 
         foreach ($lines as $idx => $line) {
             $lineNumber = $idx + 1;
