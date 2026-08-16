@@ -1818,6 +1818,38 @@ class SalesController extends Controller
         $printData = $this->buildSalePrintData($sale, $request);
         $printData['autoPrint'] = $request->boolean('direct_print', false);
 
+        if ($request->boolean('pdf')) {
+            $html = view('sales.print.ticket', array_merge($printData, ['autoPrint' => false]))->render();
+            $pageHeight = $this->estimateSaleTicketHeight($sale);
+            $pdfBinary = $this->renderPdfWithWkhtmltopdf($html, null, [
+                '--page-width',
+                '80mm',
+                '--page-height',
+                $pageHeight,
+                '--margin-top',
+                '0',
+                '--margin-right',
+                '0',
+                '--margin-bottom',
+                '0',
+                '--margin-left',
+                '0',
+                '--print-media-type',
+                '--disable-smart-shrinking',
+                '--dpi',
+                '203',
+            ]);
+
+            if ($pdfBinary !== null) {
+                $docName = strtoupper(substr($sale->documentType?->name ?? 'T', 0, 1)).$this->ticketSeriesForMovement($sale).'-'.$sale->number;
+
+                return response($pdfBinary, 200, [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'inline; filename="'.$docName.'-ticket.pdf"',
+                ]);
+            }
+        }
+
         return view('sales.print.ticket', $printData);
     }
 
@@ -1846,9 +1878,9 @@ class SalesController extends Controller
         $itemsHeight = $detailLines * 8;
         $metaHeight = ($customerNameLines + $addressLines + $documentLines + $paymentLines + $creditNoteLines) * 4;
         $notesHeight = $notesLines * 5;
-        $footerSafety = 18;
+        $footerSafety = 80;
 
-        $height = max(120, min(900, $baseHeight + $itemsHeight + $metaHeight + $notesHeight + $footerSafety));
+        $height = max(220, min(1200, $baseHeight + $itemsHeight + $metaHeight + $notesHeight + $footerSafety));
 
         return $height.'mm';
     }

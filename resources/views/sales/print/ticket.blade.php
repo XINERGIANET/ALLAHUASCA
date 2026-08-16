@@ -47,11 +47,30 @@
             padding-right: 2mm;
         }
 
-        /* Respaldo visual si el servidor no dispone temporalmente del generador PDF. */
+        /* Respaldo visual y presentación centrada estilo visor PDF */
         @media screen {
+            html {
+                background-color: #323639 !important;
+                min-height: 100vh;
+                display: flex;
+                justify-content: center;
+                align-items: flex-start;
+                padding: 24px 15px;
+            }
+
             body {
-                width: {{ (int) ($ticketPageWidthMm ?? 80) }}mm;
-                max-width: {{ (int) ($ticketPageWidthMm ?? 80) }}mm;
+                width: {{ (int) ($ticketPageWidthMm ?? 80) }}mm !important;
+                max-width: {{ (int) ($ticketPageWidthMm ?? 80) }}mm !important;
+                background: #ffffff !important;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45), 0 1px 4px rgba(0, 0, 0, 0.25) !important;
+                border-radius: 2px !important;
+                margin: 0 auto !important;
+            }
+
+            .ticket {
+                width: 100% !important;
+                max-width: 100% !important;
+                padding: 5mm 4mm 6mm !important;
             }
         }
 
@@ -133,6 +152,18 @@
         .items-table td {
             padding: 0.45mm 0.15mm;
             font-size: 2.85mm;
+        }
+
+        .items-table thead tr.header-row th {
+            border-top: 1px dashed #000 !important;
+            border-bottom: 1px dashed #000 !important;
+            padding: 1.4mm 0.15mm !important;
+        }
+
+        .items-table tbody tr.end-dash-row td {
+            border-bottom: 1px dashed #000 !important;
+            padding: 0.6mm 0 !important;
+            height: 1px;
         }
 
         .items-table th {
@@ -577,10 +608,7 @@
 
     <table class="items-table{{ $showUnitColumn ? ' has-measure-column' : '' }}">
         <thead>
-        <tr class="dash-row">
-            <th colspan="{{ $showUnitColumn ? 5 : 4 }}">------------------------------------------------------------</th>
-        </tr>
-        <tr>
+        <tr class="header-row">
             <th class="col-product"><strong>Prod.</strong></th>
             <th class="col-qty"><strong>Cant.</strong></th>
             @if($showUnitColumn)
@@ -588,9 +616,6 @@
             @endif
             <th class="col-unit"><strong>P.Unit.</strong></th>
             <th class="col-subtotal"><strong>Subt.</strong></th>
-        </tr>
-        <tr class="dash-row">
-            <th colspan="{{ $showUnitColumn ? 5 : 4 }}">------------------------------------------------------------</th>
         </tr>
         </thead>
         <tbody>
@@ -644,7 +669,7 @@
             </tr>
             @endif
         @endforeach
-            <tr class="dash-row"><td colspan="{{ $showUnitColumn ? 5 : 4 }}">------------------------------------------------------------</td></tr>
+            <tr class="end-dash-row"><td colspan="{{ $showUnitColumn ? 5 : 4 }}"></td></tr>
         </tbody>
     </table>
 
