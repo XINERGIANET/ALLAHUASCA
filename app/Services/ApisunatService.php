@@ -239,7 +239,6 @@ class ApisunatService
         $sale->save();
 
         if ($sale->salesMovement) {
-            $sale->salesMovement->number = $number;
             $sale->salesMovement->series = $catalog['serie'];
             $sale->salesMovement->save();
         }

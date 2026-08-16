@@ -3747,19 +3747,11 @@ class SalesController extends Controller
                             $padNum = str_pad((string) $eNum, 8, '0', STR_PAD_LEFT);
                             $m->number = $padNum;
                             $m->save();
-                            if ($m->salesMovement) {
-                                $m->salesMovement->number = $padNum;
-                                $m->salesMovement->save();
-                            }
                         }
                     } else {
                         $padNum = str_pad((string) $sequence, 8, '0', STR_PAD_LEFT);
                         $m->number = $padNum;
                         $m->save();
-                        if ($m->salesMovement) {
-                            $m->salesMovement->number = $padNum;
-                            $m->salesMovement->save();
-                        }
                         $sequence++;
                     }
                 }
