@@ -179,8 +179,8 @@ class ApisunatService
                 ?: $sendResp->body();
 
             if (str_contains(mb_strtolower($errorMessage, 'UTF-8'), 'repetida') || str_contains(mb_strtolower($errorMessage, 'UTF-8'), 'ya existe')) {
-                // Obtener inmediatamente el último comprobante registrado en APISUNAT
-                $apiLastNum = 0;
+                // Obtener inmediatamente el próximo correlativo libre de APISUNAT
+                $apiNextNum = 0;
                 $correlativeResp = Http::timeout(10)->post($apiUrl.'/personas/lastDocument', [
                     'personaId' => (string) $config->persona_id,
                     'personaToken' => (string) $config->persona_token,
@@ -191,10 +191,10 @@ class ApisunatService
                     $obj = $correlativeResp->object();
                     $sug = (int) data_get($obj, 'suggestedNumber', 0);
                     $last = (int) data_get($obj, 'lastNumber', 0);
-                    $apiLastNum = max($sug, $last);
+                    $apiNextNum = $sug > 0 ? $sug : ($last > 0 ? $last + 1 : 1);
                 }
 
-                $targetNum = max($targetNum + 1, $apiLastNum > 0 ? $apiLastNum + 1 : 1);
+                $targetNum = max($targetNum + 1, $apiNextNum);
                 continue;
             }
 
@@ -289,7 +289,7 @@ class ApisunatService
             $sug = (int) data_get($obj, 'suggestedNumber', 0);
             $last = (int) data_get($obj, 'lastNumber', 0);
 
-            return max($sug, $last);
+            return $sug > 0 ? $sug : ($last > 0 ? $last + 1 : 1);
         }
 
         return 0;

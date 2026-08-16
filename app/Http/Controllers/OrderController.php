@@ -4230,7 +4230,20 @@ class OrderController extends Controller
             }
         }
 
-        $nextCorrelative = $lastCorrelative + 1;
+        $apisunatNext = 0;
+        try {
+            $branch = Branch::find($branchId);
+            $apisunatService = app(\App\Services\ApisunatService::class);
+            if ($branch && $apisunatService->isConfiguredForBranch($branch)) {
+                $typeName = mb_strtolower($documentType->name ?? '', 'UTF-8');
+                $sunatTypeCode = str_contains($typeName, 'factura') ? '01' : '03';
+                $apisunatNext = $apisunatService->fetchLastDocumentNumber($branch, $sunatTypeCode);
+            }
+        } catch (\Throwable $e) {
+            // Continuar si no se pudo conectar a APISUNAT
+        }
+
+        $nextCorrelative = max($lastCorrelative + 1, $apisunatNext);
 
         return str_pad((string) $nextCorrelative, 8, '0', STR_PAD_LEFT);
     }
