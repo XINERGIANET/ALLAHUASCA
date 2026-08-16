@@ -42,13 +42,13 @@
             break-inside: avoid;
         }
 
-        /* La ticketera tiene menos ancho imprimible que el rollo: desplaza el
-           contenido a la izquierda y reserva 2 mm extra en el borde derecho. */
+        /* Impresión térmica física automática: márgenes simétricos de 3mm para evitar recortes a la izquierda */
         body.thermal-print .ticket {
-            width: calc(90% - 2mm);
-            max-width: calc(90% - 2mm);
-            padding-left: 0;
-            padding-right: 2mm;
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 2mm 3mm 4mm 3mm !important;
+            margin: 0 auto !important;
+            box-sizing: border-box !important;
         }
 
         /* Respaldo visual y presentación centrada estilo visor PDF */
@@ -95,6 +95,26 @@
         }
 
         @media print {
+            @page {
+                margin: 0;
+            }
+
+            html,
+            body {
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #ffffff !important;
+            }
+
+            .ticket {
+                width: 100% !important;
+                max-width: 100% !important;
+                padding: 2mm 3mm 4mm 3mm !important;
+                margin: 0 auto !important;
+                box-sizing: border-box !important;
+            }
+
             .logo {
                 -webkit-filter: grayscale(1) brightness(0);
                 filter: grayscale(1) brightness(0);
