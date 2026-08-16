@@ -122,6 +122,7 @@ class ApisunatService
         $customerDocType = $this->resolveCustomerDocumentType($customerDocument, $catalog['type']);
         $totals = $this->resolveMovementTotals($sale);
         $apiUrl = $this->resolveApiUrl($config);
+        $localNum = (int) preg_replace('/\D+/', '', (string) $sale->number);
 
         // 1. Obtener todos los correlativos locales ya emitidos electrónicamente
         $usedNumbers = Movement::query()
@@ -152,37 +153,44 @@ class ApisunatService
             $apiLastNum = max($sug, $last);
         }
 
-        // 3. Buscar el primer hueco previo sin emitir entre 1 y apiLastNum
-        $firstGap = null;
-        if ($apiLastNum > 0) {
-            for ($i = 1; $i <= $apiLastNum; $i++) {
-                if (! isset($usedSet[$i])) {
-                    $firstGap = $i;
-                    break;
+        // 3. Determinar el correlativo objetivo para APISUNAT:
+        // Prioridad 1: Si la venta local ya tiene número asignado (ej: 11) y no ha sido registrado electrónicamente, intentar con dicho número o superiores.
+        // Prioridad 2: Buscar el primer hueco omitido entre 1 y apiLastNum.
+        // Prioridad 3: Tomar el siguiente número libre de APISUNAT (apiLastNum + 1).
+        if ($localNum > 0 && ! isset($usedSet[$localNum])) {
+            $targetNum = $localNum;
+        } else {
+            $firstGap = null;
+            if ($apiLastNum > 0) {
+                for ($i = 1; $i <= $apiLastNum; $i++) {
+                    if (! isset($usedSet[$i])) {
+                        $firstGap = $i;
+                        break;
+                    }
                 }
             }
-        }
 
-        // 4. Determinación estricta del correlativo para APISUNAT
-        if ($firstGap !== null) {
-            $targetNum = $firstGap;
-        } elseif ($apiLastNum > 0) {
-            $targetNum = $apiLastNum + 1;
-        } else {
-            $candidate = 1;
-            while (isset($usedSet[$candidate])) {
-                $candidate++;
+            if ($firstGap !== null) {
+                $targetNum = $firstGap;
+            } elseif ($apiLastNum > 0) {
+                $targetNum = $apiLastNum + 1;
+            } else {
+                $candidate = 1;
+                while (isset($usedSet[$candidate])) {
+                    $candidate++;
+                }
+                $targetNum = $candidate;
             }
-            $targetNum = $candidate;
         }
 
         $attempts = 0;
+        $maxAttempts = 35;
         $sendResp = null;
         $number = '';
         $fileName = '';
 
-        // Bucle de reintento automático por numeración repetida
-        while ($attempts < 5) {
+        // Bucle de reintento automático por numeración repetida consultando la respuesta de APISUNAT
+        while ($attempts < $maxAttempts) {
             $attempts++;
             while (isset($usedSet[$targetNum])) {
                 $targetNum++;
@@ -206,9 +214,12 @@ class ApisunatService
 
             $errorMessage = data_get($sendResp->object(), 'error.message')
                 ?: data_get($sendResp->json(), 'error.message')
+                ?: data_get($sendResp->json(), 'message')
                 ?: $sendResp->body();
 
-            if (str_contains(mb_strtolower($errorMessage, 'UTF-8'), 'repetida') || str_contains(mb_strtolower($errorMessage, 'UTF-8'), 'ya existe')) {
+            $errLower = mb_strtolower((string) $errorMessage, 'UTF-8');
+
+            if (str_contains($errLower, 'repetida') || str_contains($errLower, 'ya existe') || str_contains($errLower, 'registrado')) {
                 $usedSet[$targetNum] = true;
                 $targetNum++;
                 continue;
@@ -220,6 +231,7 @@ class ApisunatService
         if (! $sendResp || $sendResp->failed()) {
             $errorMessage = data_get($sendResp?->object(), 'error.message')
                 ?: data_get($sendResp?->json(), 'error.message')
+                ?: data_get($sendResp?->json(), 'message')
                 ?: ($sendResp ? $sendResp->body() : 'Error enviando comprobante a Apisunat.');
 
             throw new \RuntimeException('Error enviando comprobante a Apisunat: '.$errorMessage);
