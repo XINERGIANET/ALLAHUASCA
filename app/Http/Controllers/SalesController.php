@@ -407,7 +407,6 @@ class SalesController extends Controller
             'documentType',
             'salesMovement.details.product',
             'salesMovement.details.taxRate',
-            'salesMovement.paymentMethod',
             'cashMovement.details',
             'cashMovement.paymentConcept',
             'cashMovement.shift',
