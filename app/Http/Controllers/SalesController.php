@@ -1831,7 +1831,7 @@ class SalesController extends Controller
             '--page-width',
             '80mm',
             '--page-height',
-            $pageHeight,
+            '210mm',
             '--margin-top',
             '0',
             '--margin-right',
@@ -2469,18 +2469,7 @@ class SalesController extends Controller
             return null;
         }
 
-        $url = 'https://quickchart.io/qr?size=180&margin=1&text='.rawurlencode($payload);
-
-        try {
-            $response = Http::timeout(4)->get($url);
-            if ($response->successful() && $response->body()) {
-                return 'data:image/png;base64,'.base64_encode($response->body());
-            }
-        } catch (\Throwable $e) {
-            // Continuar con URL si falla temporalmente la descarga directa
-        }
-
-        return $url;
+        return \App\Support\QrCodeGenerator::generateSvgDataUri($payload, 180);
     }
 
     /**

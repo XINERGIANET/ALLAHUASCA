@@ -461,17 +461,14 @@
 
         .qr-wrap {
             text-align: center;
-            margin-top: 1.6mm;
+            margin: 1.5mm 0;
         }
 
         .qr-dash {
-            height: 3mm;
-            overflow: hidden;
-            white-space: nowrap;
-            font-family: "Courier New", monospace;
-            font-size: 3mm;
-            font-weight: 700;
-            line-height: 3mm;
+            width: 100%;
+            border-top: 1px dashed #000 !important;
+            margin: 2mm 0 !important;
+            height: 0;
         }
 
         .ticket-footer-meta {
@@ -705,12 +702,11 @@
     @endif
 
     @if(!empty($qrImageUrl))
-        <div class="separator"></div>
-        <div class="qr-dash">------------------------------------------------------------</div>
+        <div class="qr-dash"></div>
         <div class="qr-wrap">
-            <img src="{{ $qrImageUrl }}" alt="QR del comprobante" style="width: 24mm; height: 24mm; display: block; margin: 0 auto;">
+            <img src="{{ $qrImageUrl }}" alt="QR del comprobante" style="width: 28mm; height: 28mm; display: block; margin: 1.5mm auto;">
         </div>
-        <div class="qr-dash">------------------------------------------------------------</div>
+        <div class="qr-dash"></div>
     @endif
 
     @if(!empty($ticketFooterMeta))
