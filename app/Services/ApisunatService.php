@@ -120,28 +120,29 @@ class ApisunatService
         $catalog = $this->resolveDocumentCatalog($sale, $config);
         $customerDocument = $this->resolveCustomerDocument($sale, $catalog['type']);
         $customerDocType = $this->resolveCustomerDocumentType($customerDocument, $catalog['type']);
-        $totals = $this->resolveMovementTotals($sale);
         $apiUrl = $this->resolveApiUrl($config);
-
         $localNum = (int) preg_replace('/\D+/', '', (string) $sale->number);
-        $apiLastNum = 0;
 
-        $correlativeResp = Http::timeout(20)->post($apiUrl.'/personas/lastDocument', [
-            'personaId' => (string) $config->persona_id,
-            'personaToken' => (string) $config->persona_token,
-            'type' => $catalog['type'],
-            'serie' => $catalog['serie'],
-        ]);
+        if ($localNum > 0) {
+            $targetNum = $localNum;
+        } else {
+            $apiLastNum = 0;
+            $correlativeResp = Http::timeout(10)->post($apiUrl.'/personas/lastDocument', [
+                'personaId' => (string) $config->persona_id,
+                'personaToken' => (string) $config->persona_token,
+                'type' => $catalog['type'],
+                'serie' => $catalog['serie'],
+            ]);
 
-        if ($correlativeResp->successful()) {
-            $obj = $correlativeResp->object();
-            $sug = (int) data_get($obj, 'suggestedNumber', 0);
-            $last = (int) data_get($obj, 'lastNumber', 0);
-            $apiLastNum = max($sug, $last);
+            if ($correlativeResp->successful()) {
+                $obj = $correlativeResp->object();
+                $sug = (int) data_get($obj, 'suggestedNumber', 0);
+                $last = (int) data_get($obj, 'lastNumber', 0);
+                $apiLastNum = max($sug, $last);
+            }
+
+            $targetNum = $apiLastNum > 0 ? $apiLastNum + 1 : 1;
         }
-
-        $nextApiNum = $apiLastNum > 0 ? $apiLastNum + 1 : 1;
-        $targetNum = max($localNum, $nextApiNum);
 
         $attempts = 0;
         $sendResp = null;
@@ -201,6 +202,18 @@ class ApisunatService
         } catch (\Throwable $e) {
             // Se continúa si no se pudo consultar el detalle extra de forma inmediata
         }
+
+        $sale->electronic_invoice_provider = 'apisunat';
+        $sale->electronic_invoice_external_id = $documentId;
+        $sale->electronic_invoice_series = $catalog['serie'];
+        $sale->electronic_invoice_number = $catalog['serie'].'-'.$number;
+        $sale->electronic_invoice_file_name = $fileName.'.pdf';
+        $sale->electronic_invoice_pdf_ticket_url = $apiUrl.'/documents/'.$documentId.'/getPDF/ticket80mm/'.$fileName.'.pdf';
+        $sale->electronic_invoice_pdf_a4_url = $apiUrl.'/documents/'.$documentId.'/getPDF/A4/'.$fileName.'.pdf';
+        $sale->electronic_invoice_xml_url = $urls['xml_url'] ?? null;
+        $sale->electronic_invoice_cdr_url = $urls['cdr_url'] ?? null;
+        $sale->electronic_invoice_response = (array) $result;
+        $sale->save();
 
         return [
             'status' => 'SENT',
@@ -531,7 +544,7 @@ class ApisunatService
                 '_attributes' => ['currencyID' => 'PEN'],
                 '_text' => $headerTax,
             ],
-            'cac:TaxSubtotal' => [
+            'cac:TaxSubtotal' => [[
                 'cbc:TaxableAmount' => [
                     '_attributes' => ['currencyID' => 'PEN'],
                     '_text' => $headerSubtotal,
@@ -541,13 +554,14 @@ class ApisunatService
                     '_text' => $headerTax,
                 ],
                 'cac:TaxCategory' => [
+                    'cbc:Percent' => ['_text' => round($defaultTaxPercent > 0 ? $defaultTaxPercent : 18.0, 2)],
                     'cac:TaxScheme' => [
                         'cbc:ID' => ['_text' => '1000'],
                         'cbc:Name' => ['_text' => 'IGV'],
                         'cbc:TaxTypeCode' => ['_text' => 'VAT'],
                     ],
                 ],
-            ],
+            ]],
         ];
 
         $documentBody['cac:LegalMonetaryTotal'] = [
@@ -613,7 +627,7 @@ class ApisunatService
             }
         }
 
-        $headerTaxSchemeId = trim((string) data_get($documentBody, 'cac:TaxTotal.cac:TaxSubtotal.cac:TaxCategory.cac:TaxScheme.cbc:ID._text', ''));
+        $headerTaxSchemeId = trim((string) data_get($documentBody, 'cac:TaxTotal.cac:TaxSubtotal.0.cac:TaxCategory.cac:TaxScheme.cbc:ID._text', ''));
         if ($headerTaxSchemeId === '') {
             throw new \RuntimeException('No se puede emitir electrónicamente: el resumen tributario del comprobante está incompleto.');
         }
@@ -634,28 +648,34 @@ class ApisunatService
 
     private function resolveDefaultTaxPercentForBranch(?Branch $branch): float
     {
-        $taxRateId = null;
+        $val = null;
 
         if ($branch?->id) {
-            $taxRateId = BranchParameter::query()
+            $val = BranchParameter::query()
                 ->join('parameters as p', 'p.id', '=', 'branch_parameters.parameter_id')
                 ->where('branch_parameters.branch_id', $branch->id)
                 ->whereRaw('LOWER(p.description) = ?', ['igv_defecto'])
                 ->value('branch_parameters.value');
         }
 
-        $taxRate = $taxRateId
-            ? TaxRate::query()->whereKey((int) $taxRateId)->first()
-            : null;
-
-        if (! $taxRate) {
-            $taxRate = TaxRate::query()
-                ->where('status', true)
-                ->orderBy('order_num')
-                ->first();
+        if ($val !== null && is_numeric($val)) {
+            $taxRate = TaxRate::query()->whereKey((int) $val)->first();
+            if ($taxRate && is_numeric($taxRate->tax_rate) && (float) $taxRate->tax_rate > 0) {
+                return (float) $taxRate->tax_rate;
+            }
+            if ((float) $val > 0) {
+                return (float) $val;
+            }
         }
 
-        return $taxRate ? (float) $taxRate->tax_rate : 18.0;
+        $taxRate = TaxRate::query()
+            ->where('status', true)
+            ->orderBy('order_num')
+            ->first();
+
+        return ($taxRate && is_numeric($taxRate->tax_rate) && (float) $taxRate->tax_rate > 0)
+            ? (float) $taxRate->tax_rate
+            : 18.0;
     }
 
     private function findUrlByKeyword(array $payload, array $keywords): ?string
