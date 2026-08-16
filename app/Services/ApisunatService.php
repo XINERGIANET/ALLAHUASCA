@@ -150,8 +150,13 @@ class ApisunatService
         $number = '';
         $fileName = '';
 
-        // Bucle de reintento por numeración repetida
-        while ($attempts < 3) {
+        $attempts = 0;
+        $sendResp = null;
+        $number = '';
+        $fileName = '';
+
+        // Bucle de reintento por numeración repetida consultando el último número de APISUNAT
+        while ($attempts < 10) {
             $attempts++;
             $number = str_pad((string) $targetNum, 8, '0', STR_PAD_LEFT);
             $fileName = trim((string) ($branch?->ruc ?? '0')).'-'.$catalog['type'].'-'.$catalog['serie'].'-'.$number;
@@ -174,7 +179,22 @@ class ApisunatService
                 ?: $sendResp->body();
 
             if (str_contains(mb_strtolower($errorMessage, 'UTF-8'), 'repetida') || str_contains(mb_strtolower($errorMessage, 'UTF-8'), 'ya existe')) {
-                $targetNum++;
+                // Obtener inmediatamente el último comprobante registrado en APISUNAT
+                $apiLastNum = 0;
+                $correlativeResp = Http::timeout(10)->post($apiUrl.'/personas/lastDocument', [
+                    'personaId' => (string) $config->persona_id,
+                    'personaToken' => (string) $config->persona_token,
+                    'type' => $catalog['type'],
+                    'serie' => $catalog['serie'],
+                ]);
+                if ($correlativeResp->successful()) {
+                    $obj = $correlativeResp->object();
+                    $sug = (int) data_get($obj, 'suggestedNumber', 0);
+                    $last = (int) data_get($obj, 'lastNumber', 0);
+                    $apiLastNum = max($sug, $last);
+                }
+
+                $targetNum = max($targetNum + 1, $apiLastNum > 0 ? $apiLastNum + 1 : 1);
                 continue;
             }
 
@@ -204,6 +224,8 @@ class ApisunatService
             // Se continúa si no se pudo consultar el detalle extra de forma inmediata
         }
 
+        // Sincronizar el número emitido en APISUNAT con la venta local en base de datos
+        $sale->number = $number;
         $sale->electronic_invoice_provider = 'apisunat';
         $sale->electronic_invoice_external_id = $documentId;
         $sale->electronic_invoice_series = $catalog['serie'];
@@ -215,6 +237,12 @@ class ApisunatService
         $sale->electronic_invoice_cdr_url = $urls['cdr_url'] ?? null;
         $sale->electronic_invoice_response = (array) $result;
         $sale->save();
+
+        if ($sale->salesMovement) {
+            $sale->salesMovement->number = $number;
+            $sale->salesMovement->series = $catalog['serie'];
+            $sale->salesMovement->save();
+        }
 
         return [
             'status' => 'SENT',
@@ -236,6 +264,36 @@ class ApisunatService
                 ],
             ],
         ];
+    }
+
+    public function fetchLastDocumentNumber(?Branch $branch, string $type = '03'): int
+    {
+        $config = $this->resolveConfigForBranch($branch);
+        if (! $config || ! $config->enabled) {
+            return 0;
+        }
+
+        $apiUrl = $this->resolveApiUrl($config);
+        $serie = $type === '01'
+            ? trim((string) ($config->series_factura ?: config('apisunat.series.factura', 'F001')))
+            : trim((string) ($config->series_boleta ?: config('apisunat.series.boleta', 'B001')));
+
+        $res = Http::timeout(10)->post($apiUrl.'/personas/lastDocument', [
+            'personaId' => (string) $config->persona_id,
+            'personaToken' => (string) $config->persona_token,
+            'type' => $type,
+            'serie' => $serie,
+        ]);
+
+        if ($res->successful()) {
+            $obj = $res->object();
+            $sug = (int) data_get($obj, 'suggestedNumber', 0);
+            $last = (int) data_get($obj, 'lastNumber', 0);
+
+            return max($sug, $last);
+        }
+
+        return 0;
     }
 
     public function consultDocument(?Branch $branch, string $document): array

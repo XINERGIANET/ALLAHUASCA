@@ -520,14 +520,9 @@
                     {{-- Botones de Acción Masivos --}}
                     <div class="flex flex-wrap items-center gap-2 mt-3">
                         <button type="button" onclick="reorganizarCorrelativos()"
-                            class="inline-flex h-11 items-center gap-2 rounded-lg bg-amber-600 px-4 text-sm font-medium text-white shadow-sm hover:bg-amber-700 transition">
-                            <i class="ri-hashtag text-base"></i>
-                            <span>Reordenar Correlativos</span>
-                        </button>
-                        <button type="button" onclick="sincronizarSunatMasivo()"
-                            class="inline-flex h-11 items-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-medium text-white shadow-sm hover:bg-blue-800 transition">
-                            <i class="ri-send-plane-fill text-base"></i>
-                            <span>Enviar a APISUNAT</span>
+                            class="inline-flex h-11 items-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 transition">
+                            <i class="ri-refresh-line text-base"></i>
+                            <span>Sincronizar con APISUNAT</span>
                         </button>
                     </div>
                 </form>
@@ -1453,20 +1448,9 @@
             })();
 
             function reorganizarCorrelativos() {
-                if (!confirm("¿Desea reorganizar y resecuenciar correlativos sin huecos por tipo de documento?")) return;
+                if (!confirm("¿Desea sincronizar los correlativos locales con el último comprobante emitido en APISUNAT?")) return;
                 const token = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}';
                 fetch("{{ route('sales.reorganize.correlatives') }}", {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': token, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
-                })
-                .then(res => res.json())
-                .then(data => { alert(data.message); if (data.success) window.location.reload(); });
-            }
-
-            function sincronizarSunatMasivo() {
-                if (!confirm("¿Desea enviar todas las Boletas y Facturas no emitidas a APISUNAT?")) return;
-                const token = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}';
-                fetch("{{ route('sales.batch.sunat') }}", {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': token, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
                 })

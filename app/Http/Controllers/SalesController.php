@@ -3699,58 +3699,76 @@ class SalesController extends Controller
     }
 
     /**
-     * Reorganizar y resecuenciar correlativos por tipo de documento para eliminar huecos.
+     * Sincronizar y resecuenciar correlativos locales en base al último comprobante registrado en APISUNAT.
      */
-    public function reorganizeCorrelatives(Request $request)
+    public function reorganizeCorrelatives(Request $request, ApisunatService $apisunatService)
     {
         $branchId = session('branch_id');
-        if (! $branchId) {
+        $branch = $branchId ? Branch::find($branchId) : null;
+        if (! $branch) {
             return response()->json(['success' => false, 'message' => 'No se encontró la sucursal activa.'], 422);
         }
 
         $summary = [];
 
-        DB::transaction(function () use ($branchId, &$summary) {
+        DB::transaction(function () use ($branch, $apisunatService, &$summary) {
             $documentTypeIds = Movement::query()
-                ->where('branch_id', $branchId)
+                ->where('branch_id', $branch->id)
                 ->where('movement_type_id', 2)
                 ->distinct()
                 ->pluck('document_type_id');
 
             foreach ($documentTypeIds as $docTypeId) {
                 $docType = DocumentType::find($docTypeId);
-                $typeName = $docType?->name ?? "Tipo {$docTypeId}";
+                $typeName = mb_strtolower($docType?->name ?? "tipo {$docTypeId}", 'UTF-8');
+                $sunatTypeCode = str_contains($typeName, 'factura') ? '01' : '03';
+
+                $lastApiNum = 0;
+                try {
+                    $lastApiNum = $apisunatService->fetchLastDocumentNumber($branch, $sunatTypeCode);
+                } catch (\Throwable $e) {
+                    Log::warning('Error consultando lastDocument de APISUNAT: ' . $e->getMessage());
+                }
 
                 $movements = Movement::query()
-                    ->where('branch_id', $branchId)
+                    ->where('branch_id', $branch->id)
                     ->where('movement_type_id', 2)
                     ->where('document_type_id', $docTypeId)
                     ->orderBy('moved_at', 'asc')
                     ->orderBy('id', 'asc')
                     ->get();
 
-                $sequence = 1;
+                $sequence = max(1, $lastApiNum + 1);
+
                 foreach ($movements as $m) {
-                    $newCorrelative = str_pad((string) $sequence, 8, '0', STR_PAD_LEFT);
-                    $updateData = ['number' => $newCorrelative];
-
                     if ($m->electronic_invoice_number) {
-                        $prefix = strtoupper(substr($typeName, 0, 1));
-                        $series = $m->salesMovement?->series ?? '001';
-                        $updateData['electronic_invoice_number'] = "{$prefix}{$series}-{$newCorrelative}";
+                        $eNum = (int) preg_replace('/\D+/', '', (string) $m->electronic_invoice_number);
+                        if ($eNum > 0) {
+                            $padNum = str_pad((string) $eNum, 8, '0', STR_PAD_LEFT);
+                            $m->number = $padNum;
+                            $m->save();
+                            if ($m->salesMovement) {
+                                $m->salesMovement->number = $padNum;
+                                $m->salesMovement->save();
+                            }
+                        }
+                    } else {
+                        $padNum = str_pad((string) $sequence, 8, '0', STR_PAD_LEFT);
+                        $m->number = $padNum;
+                        $m->save();
+                        if ($m->salesMovement) {
+                            $m->salesMovement->number = $padNum;
+                            $m->salesMovement->save();
+                        }
+                        $sequence++;
                     }
-
-                    $m->update($updateData);
-                    $sequence++;
                 }
 
-                $count = $movements->count();
-                $lastNum = $count > 0 ? str_pad((string) $count, 8, '0', STR_PAD_LEFT) : '00000000';
-                $summary[] = "{$typeName}: {$count} comprobantes (00000001 al {$lastNum})";
+                $summary[] = "{$docType?->name}: Último emitido APISUNAT: " . str_pad((string) $lastApiNum, 8, '0', STR_PAD_LEFT) . " | Próximo libre: " . str_pad((string) $sequence, 8, '0', STR_PAD_LEFT);
             }
         });
 
-        return response()->json(['success' => true, 'message' => 'Correlativos reorganizados sin huecos: ' . implode(' | ', $summary)]);
+        return response()->json(['success' => true, 'message' => 'Correlativos sincronizados con APISUNAT: ' . implode(' | ', $summary)]);
     }
 
     private function wrapEscPosPlainPayload(string $text): string
