@@ -4185,50 +4185,30 @@ class OrderController extends Controller
             throw new \Exception('Tipo de documento no encontrado.');
         }
 
-        $cashRegister = CashRegister::find($cashRegisterId);
-        if (! $cashRegister) {
-            throw new \Exception('Caja no encontrada.');
-        }
-
         $branchId = (int) session('branch_id');
         if (! $branchId) {
             throw new \Exception('No se encontro sucursal en sesion.');
         }
 
-        $year = (int) now()->year;
-
         $query = Movement::query()
             ->where('branch_id', $branchId)
-            ->where('document_type_id', $documentTypeId)
-            ->whereYear('moved_at', $year);
+            ->where('movement_type_id', 2)
+            ->where('document_type_id', $documentTypeId);
 
         $query->lockForUpdate();
 
-        $lastCorrelative = 0;
-        $numbers = $query->pluck('number');
-
-        foreach ($numbers as $number) {
-            $raw = trim((string) $number);
-            if ($raw === '') {
-                continue;
-            }
-
-            if (preg_match('/^\d+$/', $raw) === 1) {
-                $value = (int) $raw;
-                if ($value > $lastCorrelative) {
-                    $lastCorrelative = $value;
+        $usedNumbers = $query->pluck('number')
+            ->map(function ($n) {
+                $raw = trim((string) $n);
+                if (strlen($raw) > 8 && str_starts_with($raw, '100')) {
+                    return (int) substr($raw, 1);
                 }
+                return (int) preg_replace('/\D+/', '', $raw);
+            })
+            ->filter(fn ($n) => $n > 0)
+            ->toArray();
 
-                continue;
-            }
-
-            if (preg_match('/(\d+)-\d{4}$/', $raw, $matches) === 1) {
-                $value = (int) $matches[1];
-                if ($value > $lastCorrelative) {
-                    $lastCorrelative = $value;
-                }
-            }
-        }
+        $usedSet = array_flip($usedNumbers);
 
         $apisunatNext = 0;
         try {
@@ -4236,14 +4216,24 @@ class OrderController extends Controller
             $apisunatService = app(\App\Services\ApisunatService::class);
             if ($branch && $apisunatService->isConfiguredForBranch($branch)) {
                 $typeName = mb_strtolower($documentType->name ?? '', 'UTF-8');
-                $sunatTypeCode = str_contains($typeName, 'factura') ? '01' : '03';
-                $apisunatNext = $apisunatService->fetchLastDocumentNumber($branch, $sunatTypeCode);
+                $sunatTypeCode = str_contains($typeName, 'factura') ? '01' : (str_contains($typeName, 'boleta') ? '03' : null);
+                if ($sunatTypeCode) {
+                    $apisunatNext = $apisunatService->fetchLastDocumentNumber($branch, $sunatTypeCode);
+                }
             }
         } catch (\Throwable $e) {
             // Continuar si no se pudo conectar a APISUNAT
         }
 
-        $nextCorrelative = max($lastCorrelative + 1, $apisunatNext);
+        $lastLocalMax = ! empty($usedNumbers) ? max($usedNumbers) : 0;
+        $startCandidate = max(1, $apisunatNext, $lastLocalMax > 0 ? $lastLocalMax + 1 : 1);
+
+        $candidate = 1;
+        while (isset($usedSet[$candidate])) {
+            $candidate++;
+        }
+
+        $nextCorrelative = max($candidate, $startCandidate);
 
         return str_pad((string) $nextCorrelative, 8, '0', STR_PAD_LEFT);
     }
