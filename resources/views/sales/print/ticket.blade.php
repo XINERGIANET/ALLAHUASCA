@@ -25,15 +25,18 @@
         }
 
         body {
-            font-size: 10.5px;
+            font-size: 10px;
             line-height: 1.18;
+            text-align: center;
         }
 
         .ticket {
-            width: 92%;
-            max-width: 92%;
-            padding: 2.2mm 1.2mm 3mm;
+            width: 100%;
+            max-width: 100%;
+            padding: 2mm 3.5mm 4mm 3.5mm;
             margin: 0 auto;
+            box-sizing: border-box;
+            text-align: left;
             overflow: visible;
         }
 
@@ -224,16 +227,16 @@
             word-break: normal;
         }
 
-        .items-table.has-measure-column .col-product { width: 18%; }
+        .items-table.has-measure-column .col-product { width: 30%; }
         .items-table.has-measure-column .col-qty { width: 12%; }
-        .items-table.has-measure-column .col-measure { width: 28%; }
-        .items-table.has-measure-column .col-unit { width: 20%; }
-        .items-table.has-measure-column .col-subtotal { width: 22%; }
+        .items-table.has-measure-column .col-measure { width: 24%; }
+        .items-table.has-measure-column .col-unit { width: 17%; }
+        .items-table.has-measure-column .col-subtotal { width: 17%; }
 
         .col-subtotal {
-            width: 26%;
+            width: 20%;
             text-align: right;
-            padding-right: 0;
+            padding-right: 0.5mm;
         }
 
         .totals-table {
