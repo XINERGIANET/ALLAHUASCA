@@ -657,7 +657,7 @@
             </div>
         @endif
     @endif
-
+<br><br>
     <div class="footer">
         Impreso: {{ $printedAt->format('d/m/Y H:i:s') }}<br>
         <div class="thanks">Gracias por su preferencia</div>
