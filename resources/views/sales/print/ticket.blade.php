@@ -70,8 +70,8 @@
 
         .logo {
             display: block;
-            max-width: 38mm;
-            max-height: 16mm;
+            max-width: 100%;
+            max-height: 48mm;
             margin: 0 auto;
             object-fit: contain;
         }
