@@ -980,7 +980,7 @@ class OrderController extends Controller
             ->get(['id', 'name', 'area_id', 'capacity', 'situation', 'opened_at'])
             ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
             ->values();
-        $tablesPayload = $tables->map(function (Table $table) use ($branchId, $isMozo, $currentUserId, $currentPersonId) {
+        $tablesPayload = $tables->map(function (Table $table) use ($branchId, $isMozo, $currentUserId, $currentPersonId, $currentUserName) {
             $elapsed = '--:--';
             if (! empty($table->opened_at)) {
                 try {
