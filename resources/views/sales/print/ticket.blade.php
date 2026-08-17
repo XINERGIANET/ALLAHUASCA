@@ -534,8 +534,6 @@
         <p class="doc-code">{{ $docCode }}</p>
     </div>
 
-    <div class="qr-dash">------------------------------------------------------------</div>
-
     <table class="info-table">
         <tr>
             <td class="info-label">Fecha:</td>
@@ -564,8 +562,6 @@
             </tr>
         @endif
     </table>
-
-    <div class="qr-dash">------------------------------------------------------------</div>
 
     <table class="items-table{{ $showUnitColumn ? ' has-measure-column' : '' }}">
         <thead>
