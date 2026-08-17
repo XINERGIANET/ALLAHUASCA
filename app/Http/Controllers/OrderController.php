@@ -1152,6 +1152,18 @@ class OrderController extends Controller
                 if (($currentUserId > 0 && $lockUser === $currentUserId) || ($currentPersonId > 0 && $lockPerson === $currentPersonId)) {
                     \Illuminate\Support\Facades\Cache::forget("table_draft_lock:{$tableId}");
                 }
+            } else {
+                \Illuminate\Support\Facades\Cache::forget("table_draft_lock:{$tableId}");
+            }
+
+            // Si el mozo salió por equivocación sin guardar productos, asegurar que la mesa quede 'libre'
+            $orderMovement = OrderMovement::with('details')
+                ->where('table_id', $tableId)
+                ->whereIn('status', ['PENDIENTE', 'P'])
+                ->orderByDesc('id')
+                ->first();
+            if (! $orderMovement || ! $orderMovement->relationLoaded('details') || $orderMovement->details->isEmpty()) {
+                Table::where('id', $tableId)->update(['situation' => 'libre']);
             }
         }
 

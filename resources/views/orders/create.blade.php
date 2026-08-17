@@ -1247,6 +1247,17 @@
 
                             const releaseLockOnExit = () => {
                                 try { clearInterval(heartbeatTimer); } catch (e) {}
+                                try {
+                                    fetch(releaseTableLockUrl, {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'X-CSRF-TOKEN': csrfToken
+                                        },
+                                        body: JSON.stringify({ table_id: tableId }),
+                                        keepalive: true
+                                    }).catch(() => {});
+                                } catch (e) {}
                                 if (navigator.sendBeacon) {
                                     const params = new URLSearchParams();
                                     params.append('_token', csrfToken);
@@ -1257,6 +1268,11 @@
 
                             window.addEventListener('beforeunload', releaseLockOnExit, { once: true });
                             document.addEventListener('turbo:before-cache', releaseLockOnExit, { once: true });
+
+                            // Si el mozo hace clic en Volver/Salones, liberar mesa de inmediato
+                            document.querySelectorAll('a[href*="/Pedidos"]').forEach(el => {
+                                el.addEventListener('click', releaseLockOnExit);
+                            });
                         }
 
                         // Inicializar datos de la mesa
