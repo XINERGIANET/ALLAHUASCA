@@ -968,6 +968,7 @@ class OrderController extends Controller
         $isMozo = current_user_is_mozo();
         $currentUserId = (int) (session('user_id') ?: auth()->id());
         $currentPersonId = (int) (session('person_id') ?: auth()->user()?->person_id);
+        $currentUserName = trim((string) (auth()->user()?->name ?? session('user_name') ?? 'Mozo'));
 
         $areas = Area::query()
             ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
@@ -1032,13 +1033,13 @@ class OrderController extends Controller
             $draftLock = \Illuminate\Support\Facades\Cache::get("table_draft_lock:{$table->id}");
             $isDraftLockedByOther = false;
             $lockedByName = null;
-            if (is_array($draftLock) && ! empty($draftLock['locked_at']) && (time() - (int)$draftLock['locked_at']) < 10) {
+            if (is_array($draftLock) && ! empty($draftLock['locked_at']) && (time() - (int)$draftLock['locked_at']) < 25) {
                 $lockUser = (int) ($draftLock['user_id'] ?? 0);
                 $lockPerson = (int) ($draftLock['person_id'] ?? 0);
                 $lockUserName = trim((string) ($draftLock['user_name'] ?? ''));
                 $isSameUser = ($currentUserId > 0 && $lockUser === $currentUserId)
                            || ($currentPersonId > 0 && $lockPerson === $currentPersonId)
-                           || ($currentUserName !== '' && $lockUserName !== '' && $currentUserName === $lockUserName);
+                           || ($currentUserName !== '' && $lockUserName !== '' && strcasecmp($currentUserName, $lockUserName) === 0);
                 if (! $isSameUser) {
                     $isDraftLockedByOther = true;
                     $lockedByName = $lockUserName ?: 'Otro mozo';
@@ -1140,7 +1141,7 @@ class OrderController extends Controller
             'person_id' => $currentPersonId,
             'user_name' => $currentUserName,
             'locked_at' => time(),
-        ], 10);
+        ], 25);
 
         return response()->json(['success' => true]);
     }
@@ -1205,13 +1206,13 @@ class OrderController extends Controller
 
         // 2. Validar si la mesa está siendo tomada en borrador por OTRO mozo
         $draftLock = \Illuminate\Support\Facades\Cache::get("table_draft_lock:{$table->id}");
-        if (is_array($draftLock) && ! empty($draftLock['locked_at']) && (time() - (int)$draftLock['locked_at']) < 10) {
+        if (is_array($draftLock) && ! empty($draftLock['locked_at']) && (time() - (int)$draftLock['locked_at']) < 25) {
             $lockUser = (int) ($draftLock['user_id'] ?? 0);
             $lockPerson = (int) ($draftLock['person_id'] ?? 0);
             $lockUserName = trim((string) ($draftLock['user_name'] ?? ''));
             $isSameUser = ($currentUserId > 0 && $lockUser === $currentUserId)
                        || ($currentPersonId > 0 && $lockPerson === $currentPersonId)
-                       || ($currentUserName !== '' && $lockUserName !== '' && $currentUserName === $lockUserName);
+                       || ($currentUserName !== '' && $lockUserName !== '' && strcasecmp($currentUserName, $lockUserName) === 0);
             if (! $isSameUser) {
                 $lockName = $lockUserName ?: 'otro mozo';
                 return redirect()->route('orders.index')->with('error', "La Mesa {$table->name} está siendo tomada en este momento por {$lockName}.");
@@ -1224,7 +1225,7 @@ class OrderController extends Controller
             'person_id' => $currentPersonId,
             'user_name' => $currentUserName,
             'locked_at' => time(),
-        ], 10);
+        ], 25);
 
         $area = $table->area;
         if (! $area && $request->has('area_id')) {

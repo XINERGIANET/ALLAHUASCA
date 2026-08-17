@@ -1243,7 +1243,7 @@
                             };
 
                             sendTableHeartbeat();
-                            const heartbeatTimer = setInterval(sendTableHeartbeat, 4000);
+                            const heartbeatTimer = setInterval(sendTableHeartbeat, 5000);
 
                             const releaseLockOnExit = () => {
                                 try { clearInterval(heartbeatTimer); } catch (e) {}
