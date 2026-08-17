@@ -5631,7 +5631,7 @@
                                     openSaleTicketPdfTab(movementId);
                                     return;
                                 }
-                                const paperMm = (parseInt(td.paper_width) || 58) === 80 ? 80 : 58;
+                                const paperMm = 80;
                                 const sizeOpts = {
                                     units: 'mm',
                                     size: {

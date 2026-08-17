@@ -1879,12 +1879,12 @@ class SalesController extends Controller
             $notesLines = max(1, (int) ceil(mb_strlen((string) $sale->comment) / 26));
         }
 
-        $baseHeight = 150;
-        $itemsHeight = $detailLines * 10;
-        $qrHeight = 65;
-        $footerSafety = 45;
+        $baseHeight = 65;
+        $itemsHeight = $detailLines * 6;
+        $qrHeight = 28;
+        $footerSafety = 12;
 
-        $height = max(200, min(1200, $baseHeight + $itemsHeight + $qrHeight + $footerSafety));
+        $height = max(60, min(500, $baseHeight + $itemsHeight + $qrHeight + $footerSafety));
 
         return $height.'mm';
     }

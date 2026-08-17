@@ -1275,7 +1275,7 @@
                                 openSaleTicketPdfTab(movementId);
                                 return;
                             }
-                            const paperMm = (parseInt(td.paper_width, 10) || 58) === 80 ? 80 : 58;
+                            const paperMm = 80;
                             const paperHeight = Math.max(120, parseFloat(td.paper_height) || 200);
                             const sizeOpts = { units: 'mm', size: { width: paperMm, height: paperHeight } };
                             const configPdf = qzApi.configs.create(printerName, {
