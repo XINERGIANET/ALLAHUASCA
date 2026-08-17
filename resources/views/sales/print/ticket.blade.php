@@ -13,14 +13,15 @@
 
         @page {
             size: {{ (int) ($ticketPageWidthMm ?? 80) }}mm auto;
-            margin: 0;
+            margin: 0 !important;
         }
 
         html,
         body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: {{ (int) ($ticketPageWidthMm ?? 80) }}mm !important;
+            max-width: {{ (int) ($ticketPageWidthMm ?? 80) }}mm !important;
             background: #fff;
         }
 
@@ -30,26 +31,28 @@
         }
 
         .ticket {
-            width: 100% !important;
-            max-width: 100% !important;
-            padding: 1.5mm 1mm 2.5mm 1mm !important;
+            width: {{ (int) ($ticketPageWidthMm ?? 80) }}mm !important;
+            max-width: {{ (int) ($ticketPageWidthMm ?? 80) }}mm !important;
+            padding: 2mm 1.5mm 3mm 1.5mm !important;
             margin: 0 !important;
+            box-sizing: border-box !important;
             overflow: visible;
         }
 
-        /* La ticketera tiene menos ancho imprimible que el rollo: ocupa el 100% del espacio disponible */
+        /* La ticketera ocupa exactamente los mm de la bobina de extremo a extremo */
         body.thermal-print .ticket {
-            width: 100% !important;
-            max-width: 100% !important;
-            padding-left: 0.5mm !important;
-            padding-right: 0.5mm !important;
+            width: {{ (int) ($ticketPageWidthMm ?? 80) }}mm !important;
+            max-width: {{ (int) ($ticketPageWidthMm ?? 80) }}mm !important;
+            padding-left: 1mm !important;
+            padding-right: 1mm !important;
+            box-sizing: border-box !important;
         }
 
         /* Respaldo visual si el servidor no dispone temporalmente del generador PDF. */
         @media screen {
             body {
-                width: {{ (int) ($ticketPageWidthMm ?? 80) }}mm;
-                max-width: {{ (int) ($ticketPageWidthMm ?? 80) }}mm;
+                width: {{ (int) ($ticketPageWidthMm ?? 80) }}mm !important;
+                max-width: {{ (int) ($ticketPageWidthMm ?? 80) }}mm !important;
             }
         }
 
@@ -70,12 +73,26 @@
         }
 
         @media print {
-            .logo {
-                -webkit-filter: grayscale(1) brightness(0);
-                filter: grayscale(1) brightness(0);
-                opacity: 1;
+            @page {
+                size: {{ (int) ($ticketPageWidthMm ?? 80) }}mm auto;
+                margin: 0 !important;
             }
-        }
+
+            html,
+            body {
+                width: {{ (int) ($ticketPageWidthMm ?? 80) }}mm !important;
+                max-width: {{ (int) ($ticketPageWidthMm ?? 80) }}mm !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            .ticket {
+                width: {{ (int) ($ticketPageWidthMm ?? 80) }}mm !important;
+                max-width: {{ (int) ($ticketPageWidthMm ?? 80) }}mm !important;
+                padding: 2mm 1.5mm 3mm 1.5mm !important;
+                margin: 0 !important;
+                box-sizing: border-box !important;
+            }
 
         .company {
             margin: 0;
