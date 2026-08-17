@@ -447,10 +447,31 @@
             gap: 2mm;
         }
 
+        .qr-dash {
+            height: 3.5mm;
+            margin-top: 2mm;
+            margin-bottom: 2mm;
+            overflow: hidden;
+            white-space: nowrap;
+            font-family: "Courier New", monospace;
+            font-size: 3mm;
+            font-weight: 700;
+            line-height: 3.5mm;
+            text-align: center;
+        }
+
+        .qr-wrap {
+            margin-top: 2.5mm;
+            margin-bottom: 2.5mm;
+            text-align: center;
+        }
+
         .qr-wrap img {
             width: 24mm;
             height: 24mm;
             object-fit: contain;
+            display: block;
+            margin: 0 auto;
         }
 
         .footer {
@@ -607,11 +628,11 @@
     @endif
 
     @if(!empty($qrImageUrl))
-        <div class="qr-dash">------------------------------------------------------------</div>
+        <div class="qr-dash">--------------------------------------------------</div>
         <div class="qr-wrap">
             <img src="{{ $qrImageUrl }}" alt="QR del comprobante">
         </div>
-        <div class="qr-dash">------------------------------------------------------------</div>
+        <div class="qr-dash">--------------------------------------------------</div>
         @if(!empty($ticketFooterMeta))
             <div class="ticket-footer-meta">
                 <div><strong>Pedido:</strong> {{ $ticketFooterMeta['order_number'] }}</div>
