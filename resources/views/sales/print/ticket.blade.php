@@ -326,17 +326,17 @@
         }
 
         /* Tipografía optimizada para la salida física del botón verde. */
-        body.ticket-paper-80.thermal-print .company { font-size: 6.7mm; }
-        body.ticket-paper-80.thermal-print .subhead { font-size: 4.15mm; }
-        body.ticket-paper-80.thermal-print .doc-code { font-size: 5.3mm; }
+        body.ticket-paper-80.thermal-print .company { font-size: 7.2mm; }
+        body.ticket-paper-80.thermal-print .subhead { font-size: 4.5mm; }
+        body.ticket-paper-80.thermal-print .doc-code { font-size: 5.8mm; }
         body.ticket-paper-80.thermal-print .info-table td,
-        body.ticket-paper-80.thermal-print .totals-table td { font-size: 3.4mm; }
-        body.ticket-paper-80.thermal-print .items-table th { font-size: 3.2mm; }
+        body.ticket-paper-80.thermal-print .totals-table td { font-size: 3.8mm; }
+        body.ticket-paper-80.thermal-print .items-table th { font-size: 3.6mm; }
         body.ticket-paper-80.thermal-print .items-table td {
-            font-size: 3.55mm;
-            line-height: 1.18;
+            font-size: 3.85mm;
+            line-height: 1.2;
         }
-        body.ticket-paper-80.thermal-print .grand-total td { font-size: 4.5mm; }
+        body.ticket-paper-80.thermal-print .grand-total td { font-size: 4.8mm; }
 
         body.ticket-paper-58.thermal-print .info-table td { font-size: 2.9mm; }
         body.ticket-paper-58.thermal-print .items-table th { font-size: 2.7mm; }
@@ -465,7 +465,7 @@
         }
     </style>
 </head>
-<body class="ticket-paper-{{ (int) ($ticketPageWidthMm ?? 80) === 58 ? '58' : '80' }}{{ !empty($thermalPrint) ? ' thermal-print' : '' }}">
+<body class="ticket-paper-{{ (int) ($ticketPageWidthMm ?? 80) === 58 ? '58' : '80' }} thermal-print">
 @php
     $docName = strtoupper($sale->documentType?->name ?? 'TICKET DE VENTA');
     $documentNameLower = mb_strtolower($docName, 'UTF-8');
