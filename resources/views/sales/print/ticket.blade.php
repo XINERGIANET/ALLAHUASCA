@@ -31,20 +31,20 @@
         }
 
         .ticket {
-            width: 77mm !important;
-            max-width: 77mm !important;
+            width: 75mm !important;
+            max-width: 75mm !important;
             padding: 2mm 1.5mm 3mm 1.5mm !important;
             margin: 0 auto !important;
             box-sizing: border-box !important;
             overflow: visible;
         }
 
-        /* La ticketera utiliza 77mm utiles de impresion fisica para no cortar la ultima columna */
+        /* La ticketera utiliza 75mm utiles con 3mm de margen derecho de seguridad */
         body.thermal-print .ticket {
-            width: 77mm !important;
-            max-width: 77mm !important;
+            width: 75mm !important;
+            max-width: 75mm !important;
             padding-left: 1mm !important;
-            padding-right: 2mm !important;
+            padding-right: 3mm !important;
             box-sizing: border-box !important;
         }
 
@@ -209,11 +209,11 @@
             word-break: normal;
         }
 
-        .items-table.has-measure-column .col-product { width: 18%; }
-        .items-table.has-measure-column .col-qty { width: 12%; }
-        .items-table.has-measure-column .col-measure { width: 28%; }
-        .items-table.has-measure-column .col-unit { width: 20%; }
-        .items-table.has-measure-column .col-subtotal { width: 22%; }
+        .items-table.has-measure-column .col-product { width: 14%; }
+        .items-table.has-measure-column .col-qty { width: 11%; }
+        .items-table.has-measure-column .col-measure { width: 25%; }
+        .items-table.has-measure-column .col-unit { width: 22%; }
+        .items-table.has-measure-column .col-subtotal { width: 28%; }
 
         .col-subtotal {
             width: 26%;
@@ -325,18 +325,18 @@
             font-size: 4.2mm;
         }
 
-        /* Tipografía optimizada para el punto exacto del cabezal térmico. */
-        body.ticket-paper-80.thermal-print .company { font-size: 6.8mm; }
-        body.ticket-paper-80.thermal-print .subhead { font-size: 4.2mm; }
-        body.ticket-paper-80.thermal-print .doc-code { font-size: 5.4mm; }
+        /* Tipografía calibrada para el punto de oro físico del cabezal térmico. */
+        body.ticket-paper-80.thermal-print .company { font-size: 6.5mm; }
+        body.ticket-paper-80.thermal-print .subhead { font-size: 4.0mm; }
+        body.ticket-paper-80.thermal-print .doc-code { font-size: 5.2mm; }
         body.ticket-paper-80.thermal-print .info-table td,
-        body.ticket-paper-80.thermal-print .totals-table td { font-size: 3.5mm; }
-        body.ticket-paper-80.thermal-print .items-table th { font-size: 3.3mm; }
+        body.ticket-paper-80.thermal-print .totals-table td { font-size: 3.35mm; }
+        body.ticket-paper-80.thermal-print .items-table th { font-size: 3.2mm; }
         body.ticket-paper-80.thermal-print .items-table td {
-            font-size: 3.55mm;
-            line-height: 1.18;
+            font-size: 3.4mm;
+            line-height: 1.16;
         }
-        body.ticket-paper-80.thermal-print .grand-total td { font-size: 4.5mm; }
+        body.ticket-paper-80.thermal-print .grand-total td { font-size: 4.3mm; }
 
         body.ticket-paper-58.thermal-print .info-table td { font-size: 2.9mm; }
         body.ticket-paper-58.thermal-print .items-table th { font-size: 2.7mm; }
