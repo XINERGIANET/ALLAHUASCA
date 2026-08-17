@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Exports\SalesExport;
 use App\Models\Bank;
 use App\Models\Branch;
+use App\Models\BranchParameter;
 use App\Models\Card;
 use App\Models\CashMovements;
 use App\Models\CashRegister;
@@ -518,7 +519,7 @@ class SalesController extends Controller
                     $pendingAmount = $debt ?? 0;
                 }
 
-                $defaultTaxRate = TaxRate::where('status', true)->orderBy('order_num')->first();
+                $defaultTaxRate = $this->getBranchIgvDefectoTaxRate($branchId);
                 $defaultTaxPct = $defaultTaxRate ? (float) $defaultTaxRate->tax_rate : 18;
                 $sm = $movement->salesMovement;
                 $draftSale = [
@@ -569,7 +570,7 @@ class SalesController extends Controller
             ->map(fn ($pb) => [
                 'product_id' => (int) $pb->product_id,
                 'price' => (float) $pb->price,
-                'tax_rate' => $pb->taxRate ? (float) $pb->taxRate->tax_rate : null,
+                'tax_rate' => $defaultTaxPct,
             ])
             ->values();
 
@@ -1049,8 +1050,8 @@ class SalesController extends Controller
                     throw new \Exception("El producto {$product->description} no tiene una unidad base configurada");
                 }
 
-                $taxRate = $productBranch->taxRate;
-                $taxRateValue = $taxRate ? ($taxRate->tax_rate / 100) : $this->getDefaultTaxRateValue();
+                $taxRate = $this->resolveSalesTaxRate($productBranch, $branchId);
+                $taxRateValue = $taxRate ? ($taxRate->tax_rate / 100) : $this->getDefaultTaxRateValue($branchId);
 
                 $courtesyQty = (float) ($item['courtesyQty'] ?? $item['courtesy_quantity'] ?? 0);
                 $courtesyQty = max(0, min($courtesyQty, $qty));
@@ -1443,8 +1444,8 @@ class SalesController extends Controller
                     throw new \Exception("El producto {$product->description} no tiene una unidad base configurada");
                 }
 
-                $taxRate = $productBranch->taxRate;
-                $taxRateValue = $taxRate ? ($taxRate->tax_rate / 100) : $this->getDefaultTaxRateValue();
+                $taxRate = $this->resolveSalesTaxRate($productBranch, $branchId);
+                $taxRateValue = $taxRate ? ($taxRate->tax_rate / 100) : $this->getDefaultTaxRateValue($branchId);
 
                 $qty = (float) ($item['qty'] ?? 0);
                 $courtesyQty = (float) ($item['courtesyQty'] ?? $item['courtesy_quantity'] ?? 0);
@@ -1773,10 +1774,54 @@ class SalesController extends Controller
         ];
     }
 
-    /** Obtiene la tasa de impuesto por defecto del sistema (valor 0-1, ej: 0.18 para 18%). */
-    private function getDefaultTaxRateValue(): float
+    public function getBranchIgvDefectoTaxRate(?int $branchId = null): ?TaxRate
     {
-        $taxRate = TaxRate::where('status', true)->orderBy('order_num')->first();
+        $branchId = $branchId ?: (int) session('branch_id');
+        if ($branchId > 0) {
+            $val = BranchParameter::query()
+                ->join('parameters as p', 'p.id', '=', 'branch_parameters.parameter_id')
+                ->where('branch_parameters.branch_id', $branchId)
+                ->whereRaw('LOWER(p.description) = ?', ['igv_defecto'])
+                ->whereNull('branch_parameters.deleted_at')
+                ->whereNull('p.deleted_at')
+                ->value('branch_parameters.value');
+
+            if ($val !== null && trim((string)$val) !== '') {
+                $valStr = trim((string)$val);
+                if (is_numeric($valStr)) {
+                    $taxRate = TaxRate::where('id', (int) $valStr)->first();
+                    if ($taxRate) {
+                        return $taxRate;
+                    }
+                    $taxRateByPct = TaxRate::where('tax_rate', (float) $valStr)->where('status', true)->first();
+                    if ($taxRateByPct) {
+                        return $taxRateByPct;
+                    }
+                }
+            }
+        }
+
+        return TaxRate::where('status', true)->orderBy('order_num')->first();
+    }
+
+    private function resolveSalesTaxRate(?ProductBranch $productBranch, ?int $branchId = null): ?TaxRate
+    {
+        $branchId = $branchId ?: ($productBranch?->branch_id ?: (int) session('branch_id'));
+        $branchTaxRate = $this->getBranchIgvDefectoTaxRate($branchId);
+        if ($branchTaxRate) {
+            return $branchTaxRate;
+        }
+
+        if ($productBranch && $productBranch->taxRate) {
+            return $productBranch->taxRate;
+        }
+
+        return TaxRate::where('status', true)->orderBy('order_num')->first();
+    }
+
+    private function getDefaultTaxRateValue(?int $branchId = null): float
+    {
+        $taxRate = $this->getBranchIgvDefectoTaxRate($branchId);
 
         return $taxRate ? ((float) $taxRate->tax_rate) / 100 : 0.18;
     }
@@ -2852,7 +2897,8 @@ class SalesController extends Controller
      */
     private function calculateSubtotalAndTaxFromItems(array $items, int $branchId): array
     {
-        $defaultTaxPct = $this->getDefaultTaxRateValue();
+        $branchTaxRate = $this->getBranchIgvDefectoTaxRate($branchId);
+        $defaultTaxPct = $branchTaxRate ? ((float) $branchTaxRate->tax_rate / 100) : 0.18;
         $subtotal = 0.0;
         $tax = 0.0;
         $total = 0.0;
@@ -2863,7 +2909,7 @@ class SalesController extends Controller
                 ->where('branch_id', $branchId)
                 ->first();
 
-            $taxRate = $productBranch?->taxRate;
+            $taxRate = $this->resolveSalesTaxRate($productBranch, $branchId);
             $taxRateValue = $taxRate ? ($taxRate->tax_rate / 100) : $defaultTaxPct;
 
             $qty = (float) ($item['qty'] ?? 0);

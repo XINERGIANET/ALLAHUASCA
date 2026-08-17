@@ -3728,14 +3728,13 @@ class OrderController extends Controller
                                 continue;
                             }
 
-                            // Calcular subtotal (original_amount) si es posible
+                            // Calcular subtotal (original_amount) usando IGV por defecto de sucursal
                             $qty = (float) $orderDetail->quantity;
                             $totalDetail = (float) $orderDetail->amount;
-                            $taxRateVal = 0;
-                            if ($orderDetail->tax_rate_snapshot && isset($orderDetail->tax_rate_snapshot['tax_rate'])) {
+                            $branchTaxRate = (new SalesController)->getBranchIgvDefectoTaxRate($branchId);
+                            $taxRateVal = $branchTaxRate ? ((float) $branchTaxRate->tax_rate / 100) : 0.18;
+                            if (! $branchTaxRate && $orderDetail->tax_rate_snapshot && isset($orderDetail->tax_rate_snapshot['tax_rate'])) {
                                 $taxRateVal = (float) $orderDetail->tax_rate_snapshot['tax_rate'] / 100;
-                            } else {
-                                $taxRateVal = 0.10; // Fallback al 10% según processOrder
                             }
 
                             $subtotalDetail = $taxRateVal > 0 ? ($totalDetail / (1 + $taxRateVal)) : $totalDetail;
@@ -3748,8 +3747,12 @@ class OrderController extends Controller
                                 'product_id' => $orderDetail->product_id,
                                 'product_snapshot' => $orderDetail->product_snapshot,
                                 'unit_id' => $orderDetail->unit_id,
-                                'tax_rate_id' => $orderDetail->tax_rate_id,
-                                'tax_rate_snapshot' => $orderDetail->tax_rate_snapshot,
+                                'tax_rate_id' => $branchTaxRate ? $branchTaxRate->id : $orderDetail->tax_rate_id,
+                                'tax_rate_snapshot' => $branchTaxRate ? [
+                                    'id' => $branchTaxRate->id,
+                                    'description' => $branchTaxRate->description,
+                                    'tax_rate' => $branchTaxRate->tax_rate,
+                                ] : $orderDetail->tax_rate_snapshot,
                                 'quantity' => $orderDetail->quantity,
                                 'courtesy_quantity' => (int) $orderDetail->courtesy_quantity,
                                 'amount' => $orderDetail->amount,
