@@ -1961,13 +1961,9 @@ class SalesController extends Controller
 
         $printerKey = mb_strtolower(trim((string) ($printer?->name ?: $printer?->id ?: 'default')));
         $dedupeKey = 'sale_thermal_print:'.$branchId.':'.$movement->id.':'.md5($printerKey);
-        if (! Cache::add($dedupeKey, 1, now()->addSeconds(15))) {
-            return response()->json([
-                'success' => true,
-                'duplicate_skipped' => true,
-                'message' => 'Solicitud duplicada detectada; se omitió la segunda impresión.',
-            ]);
-        }
+
+        // Permitir la impresión y reimpresión inmediata en cada clic del usuario
+        Cache::forget($dedupeKey);
 
         $ticketText = $validated['ticket_text'] ?? null;
         $plain = $ticketText !== null
