@@ -1993,10 +1993,7 @@ class SalesController extends Controller
 
         // Modo QZ: mismo ticket maquetado que la vista/PDF manual (wkhtmltopdf); fallback RAW si no hay PDF.
         if ($qzMode) {
-            $paperWidthMm = (int) ($printer?->width ?? 80);
-            if (! in_array($paperWidthMm, [58, 80], true)) {
-                $paperWidthMm = 80;
-            }
+            $paperWidthMm = 80;
 
             $printData = $this->buildSalePrintData($movement, $request);
             $printData['autoPrint'] = false;
@@ -2377,7 +2374,7 @@ class SalesController extends Controller
             $sale->responsible_name ?: $sale->user_name,
         ])->filter(fn ($value) => filled($value))->implode(' - ');
 
-        return [
+        $printData = [
             'sale' => $sale,
             'details' => $details,
             'branchForLogo' => $branchForLogo,

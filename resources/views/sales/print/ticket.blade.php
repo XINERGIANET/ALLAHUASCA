@@ -465,7 +465,7 @@
         }
     </style>
 </head>
-<body class="ticket-paper-{{ (int) ($ticketPageWidthMm ?? 80) === 58 ? '58' : '80' }} thermal-print">
+<body class="ticket-paper-80 thermal-print">
 @php
     $docName = strtoupper($sale->documentType?->name ?? 'TICKET DE VENTA');
     $documentNameLower = mb_strtolower($docName, 'UTF-8');
