@@ -30,21 +30,19 @@
         }
 
         .ticket {
-            width: 90%;
-            max-width: 90%;
-            padding: 2.2mm 1.2mm 3mm;
-            margin-left: 0;
-            margin-right: auto;
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 1.5mm 1mm 2.5mm 1mm !important;
+            margin: 0 !important;
             overflow: visible;
         }
 
-        /* La ticketera tiene menos ancho imprimible que el rollo: desplaza el
-           contenido a la izquierda y reserva 2 mm extra en el borde derecho. */
+        /* La ticketera tiene menos ancho imprimible que el rollo: ocupa el 100% del espacio disponible */
         body.thermal-print .ticket {
-            width: calc(90% - 2mm);
-            max-width: calc(90% - 2mm);
-            padding-left: 0;
-            padding-right: 2mm;
+            width: 100% !important;
+            max-width: 100% !important;
+            padding-left: 0.5mm !important;
+            padding-right: 0.5mm !important;
         }
 
         /* Respaldo visual si el servidor no dispone temporalmente del generador PDF. */
@@ -334,7 +332,8 @@
         body.thermal-print .notes { font-size: 3.25mm; }
         body.thermal-print .footer { font-size: 3mm; }
         body.thermal-print .thanks { font-size: 3.25mm; }
-        .dash-row td {
+        .dash-row td,
+        .dash-row th {
             height: 3mm;
             padding: 0;
             overflow: hidden;
