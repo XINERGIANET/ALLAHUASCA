@@ -37,6 +37,8 @@
             margin: 0 auto !important;
             box-sizing: border-box !important;
             overflow: visible;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
         }
 
         /* La ticketera utiliza 75mm utiles con 3mm de margen derecho de seguridad */
@@ -46,6 +48,8 @@
             padding-left: 1mm !important;
             padding-right: 3mm !important;
             box-sizing: border-box !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
         }
 
         /* Respaldo visual si el servidor no dispone temporalmente del generador PDF. */
