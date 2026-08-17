@@ -355,14 +355,15 @@
         body.thermal-print .thanks { font-size: 3.25mm; }
         .dash-row td,
         .dash-row th {
-            height: 3mm;
+            height: 3.2mm;
             padding: 0;
             overflow: hidden;
             white-space: nowrap;
             font-family: "Courier New", monospace;
-            font-size: 3mm;
+            font-size: 3.3mm;
             font-weight: 700;
-            line-height: 3mm;
+            letter-spacing: 0.5px;
+            line-height: 3.2mm;
         }
 
         body.thermal-print .company,
@@ -566,7 +567,7 @@
     <table class="items-table{{ $showUnitColumn ? ' has-measure-column' : '' }}">
         <thead>
         <tr class="dash-row">
-            <th colspan="{{ $showUnitColumn ? 5 : 4 }}">------------------------------------------------------------</th>
+            <th colspan="{{ $showUnitColumn ? 5 : 4 }}">-----------------------------------------------------------------</th>
         </tr>
         <tr>
             <th class="col-product"><strong>Prod.</strong></th>
@@ -578,7 +579,7 @@
             <th class="col-subtotal"><strong>Subt.</strong></th>
         </tr>
         <tr class="dash-row">
-            <th colspan="{{ $showUnitColumn ? 5 : 4 }}">------------------------------------------------------------</th>
+            <th colspan="{{ $showUnitColumn ? 5 : 4 }}">-----------------------------------------------------------------</th>
         </tr>
         </thead>
         <tbody>
@@ -601,7 +602,7 @@
                 <td class="col-subtotal">{{ number_format($lineTotal, 2) }}</td>
             </tr>
         @endforeach
-            <tr class="dash-row"><td colspan="{{ $showUnitColumn ? 5 : 4 }}">------------------------------------------------------------</td></tr>
+            <tr class="dash-row"><td colspan="{{ $showUnitColumn ? 5 : 4 }}">-----------------------------------------------------------------</td></tr>
         </tbody>
     </table>
 
@@ -630,13 +631,13 @@
 
     @if(!empty($qrImageUrl))
         <table class="items-table" style="margin-top: 2.5mm; margin-bottom: 2.5mm;">
-            <tr class="dash-row"><th colspan="{{ $showUnitColumn ? 5 : 4 }}">------------------------------------------------------------</th></tr>
+            <tr class="dash-row"><th colspan="{{ $showUnitColumn ? 5 : 4 }}">-----------------------------------------------------------------</th></tr>
         </table>
         <div class="qr-wrap">
             <img src="{{ $qrImageUrl }}" alt="QR del comprobante">
         </div>
         <table class="items-table" style="margin-top: 2.5mm; margin-bottom: 2.5mm;">
-            <tr class="dash-row"><th colspan="{{ $showUnitColumn ? 5 : 4 }}">------------------------------------------------------------</th></tr>
+            <tr class="dash-row"><th colspan="{{ $showUnitColumn ? 5 : 4 }}">-----------------------------------------------------------------</th></tr>
         </table>
         @if(!empty($ticketFooterMeta))
             <div class="ticket-footer-meta">
@@ -657,7 +658,7 @@
             </div>
         @endif
     @endif
-<br><br>
+<br>
     <div class="footer">
         Impreso: {{ $printedAt->format('d/m/Y H:i:s') }}<br>
         <div class="thanks">Gracias por su preferencia</div>
