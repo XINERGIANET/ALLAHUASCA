@@ -2931,7 +2931,7 @@ class OrderController extends Controller
 
         return $this->renderTextTicketPdfResponse(
             (string) $validated['ticket_text'],
-            (int) ($validated['paper_width'] ?? 58),
+            (int) ($validated['paper_width'] ?? 80),
             (string) ($validated['title'] ?? 'Comanda'),
             'comanda'
         );
@@ -2949,7 +2949,7 @@ class OrderController extends Controller
             'success' => true,
             'url' => $this->storeTextTicketPdfPayload(
                 (string) $validated['ticket_text'],
-                (int) ($validated['paper_width'] ?? 58),
+                (int) ($validated['paper_width'] ?? 80),
                 (string) ($validated['title'] ?? 'Comanda'),
                 'comanda'
             ),
@@ -2966,7 +2966,7 @@ class OrderController extends Controller
 
         return $this->renderTextTicketPdfResponse(
             (string) $validated['ticket_text'],
-            (int) ($validated['paper_width'] ?? 58),
+            (int) ($validated['paper_width'] ?? 80),
             (string) ($validated['title'] ?? 'Precuenta'),
             'precuenta'
         );
@@ -2984,7 +2984,7 @@ class OrderController extends Controller
             'success' => true,
             'url' => $this->storeTextTicketPdfPayload(
                 (string) $validated['ticket_text'],
-                (int) ($validated['paper_width'] ?? 58),
+                (int) ($validated['paper_width'] ?? 80),
                 (string) ($validated['title'] ?? 'Precuenta'),
                 'precuenta'
             ),
@@ -2998,7 +2998,7 @@ class OrderController extends Controller
 
         return $this->renderTextTicketPdfResponse(
             (string) ($payload['ticket_text'] ?? ''),
-            (int) ($payload['paper_width'] ?? 58),
+            (int) ($payload['paper_width'] ?? 80),
             (string) ($payload['title'] ?? 'Ticket'),
             (string) ($payload['file_prefix'] ?? 'ticket')
         );
@@ -3006,7 +3006,7 @@ class OrderController extends Controller
 
     private function renderTextTicketPdfResponse(string $ticketText, int $paperWidth, string $title, string $filePrefix)
     {
-        $paperWidth = $paperWidth === 80 ? 80 : 58;
+        $paperWidth = $paperWidth === 58 ? 58 : 80;
         $normalizedText = str_replace(["\r\n", "\r"], "\n", trim($ticketText));
         $lineCount = max(1, count(explode("\n", $normalizedText)));
         $heightMm = min(500, max(60, (int) ceil(($paperWidth === 80 ? 22 : 18) + ($lineCount * ($paperWidth === 80 ? 4.0 : 3.7)))));
@@ -3044,7 +3044,7 @@ class OrderController extends Controller
 
         Cache::put('text-ticket-pdf:' . $token, [
             'ticket_text' => $ticketText,
-            'paper_width' => $paperWidth === 80 ? 80 : 58,
+            'paper_width' => $paperWidth === 58 ? 58 : 80,
             'title' => $title,
             'file_prefix' => $filePrefix,
         ], now()->addMinutes(10));

@@ -1831,7 +1831,7 @@ class SalesController extends Controller
             '--page-width',
             '80mm',
             '--page-height',
-            '210mm',
+            $pageHeight,
             '--margin-top',
             '0',
             '--margin-right',
@@ -3290,7 +3290,7 @@ class SalesController extends Controller
         $ticketAddressDisplay = (string) ($printData['ticketAddressDisplay'] ?? '');
 
         // Ancho dinámico según impresora configurada (80mm → 48 chars, 58mm → 32 chars)
-        $printerWidthMm = (int) ($printer?->width ?? 58);
+        $printerWidthMm = (int) ($printer?->width ?? 80);
         $w = $printerWidthMm >= 80 ? 48 : 32;
         $sep = str_repeat('=', $w);
         $lines = [];
@@ -3370,7 +3370,7 @@ class SalesController extends Controller
         $paymentLabel = $printData['paymentLabel'];
         $ticketAddressDisplay = (string) ($printData['ticketAddressDisplay'] ?? '');
 
-        $printerWidthMm = (int) ($printer?->width ?? 58);
+        $printerWidthMm = (int) ($printer?->width ?? 80);
         $lineWidth = $printerWidthMm >= 80 ? 48 : 32;
         // La unidad de medida se imprime en todos los comprobantes. No se
         // condiciona al nombre porque algunas instalaciones usan abreviaturas.
