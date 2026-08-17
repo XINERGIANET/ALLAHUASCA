@@ -284,6 +284,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/Pedidos/validar-pin-mozo', [OrderController::class, 'validateWaiterPin'])
         ->name('orders.validateWaiterPin');
 
+    // Bloqueo y latido de mesas en tiempo real (anti-colisión mozos)
+    Route::post('/Pedidos/heartbeat-mesa', [OrderController::class, 'tableHeartbeat'])
+        ->name('orders.tableHeartbeat');
+    Route::post('/Pedidos/release-table-lock', [OrderController::class, 'releaseTableLock'])
+        ->name('orders.releaseTableLock');
+
     // Dashboard pages
     Route::get('/', [\App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/productos-vendidos/pdf', [\App\Http\Controllers\DashboardController::class, 'productsSoldPdf'])

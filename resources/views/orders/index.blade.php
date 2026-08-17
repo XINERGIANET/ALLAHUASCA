@@ -686,9 +686,11 @@
                         });
                         this.tickElapsed();
                         const elapsedInterval = setInterval(() => this.tickElapsed(), 1000);
+                        const pollTablesInterval = setInterval(() => this.refreshTables(), 3000);
                         // Alpine $cleanup no está disponible en todas las builds; con Turbo, limpiamos al cachear/navegar.
                         const cleanup = () => {
                             try { clearInterval(elapsedInterval); } catch (e) {}
+                            try { clearInterval(pollTablesInterval); } catch (e) {}
                         };
                         window.addEventListener('beforeunload', cleanup, { once: true });
                         document.addEventListener('turbo:before-cache', cleanup, { once: true });

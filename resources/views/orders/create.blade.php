@@ -1214,18 +1214,49 @@
                         // Marcar la mesa como ocupada al abrir la vista (no aplica en venta mostrador)
                         if (!counterPosMode) {
                             const tableId = currentTable.table_id ?? currentTable.id ?? {{ $table->id }};
+                            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
                             fetch('{{ route('orders.openTable') }}', {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
-                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute(
-                                        'content') || '',
+                                    'X-CSRF-TOKEN': csrfToken,
                                     'Accept': 'application/json'
                                 },
                                 body: JSON.stringify({
                                     table_id: tableId
                                 })
                             }).catch(() => {});
+
+                            // Latido en tiempo real (heartbeat) cada 10s para mantener la mesa reservada al mozo actual
+                            const tableHeartbeatUrl = @json(route('orders.tableHeartbeat'));
+                            const releaseTableLockUrl = @json(route('orders.releaseTableLock'));
+
+                            const sendTableHeartbeat = () => {
+                                fetch(tableHeartbeatUrl, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': csrfToken
+                                    },
+                                    body: JSON.stringify({ table_id: tableId })
+                                }).catch(() => {});
+                            };
+
+                            sendTableHeartbeat();
+                            const heartbeatTimer = setInterval(sendTableHeartbeat, 10000);
+
+                            const releaseLockOnExit = () => {
+                                try { clearInterval(heartbeatTimer); } catch (e) {}
+                                if (navigator.sendBeacon) {
+                                    const params = new URLSearchParams();
+                                    params.append('_token', csrfToken);
+                                    params.append('table_id', tableId);
+                                    navigator.sendBeacon(releaseTableLockUrl, params);
+                                }
+                            };
+
+                            window.addEventListener('beforeunload', releaseLockOnExit, { once: true });
+                            document.addEventListener('turbo:before-cache', releaseLockOnExit, { once: true });
                         }
 
                         // Inicializar datos de la mesa
