@@ -2225,7 +2225,14 @@ class SalesController extends Controller
 
         file_put_contents($htmlPath, $html);
 
-        $args = array_merge([
+        $hasMarginOverride = in_array('--margin-top', $extraArgs, true)
+            || in_array('--margin-left', $extraArgs, true)
+            || in_array('--margin-right', $extraArgs, true)
+            || in_array('--margin-bottom', $extraArgs, true);
+
+        $defaultMargin = ($hasMarginOverride || empty($pageSize)) ? '0' : '10';
+
+        $baseArgs = [
             $binary,
             '--enable-local-file-access',
             '--disable-javascript',
@@ -2235,15 +2242,22 @@ class SalesController extends Controller
             'ignore',
             '--encoding',
             'utf-8',
-            '--margin-top',
-            '10',
-            '--margin-right',
-            '10',
-            '--margin-bottom',
-            '10',
-            '--margin-left',
-            '10',
-        ], $extraArgs);
+        ];
+
+        if (! $hasMarginOverride) {
+            $baseArgs = array_merge($baseArgs, [
+                '--margin-top',
+                $defaultMargin,
+                '--margin-right',
+                $defaultMargin,
+                '--margin-bottom',
+                $defaultMargin,
+                '--margin-left',
+                $defaultMargin,
+            ]);
+        }
+
+        $args = array_merge($baseArgs, $extraArgs);
 
         if (! empty($pageSize)) {
             $args[] = '--page-size';
