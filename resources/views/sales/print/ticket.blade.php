@@ -31,20 +31,20 @@
         }
 
         .ticket {
-            width: {{ (int) ($ticketPageWidthMm ?? 80) }}mm !important;
-            max-width: {{ (int) ($ticketPageWidthMm ?? 80) }}mm !important;
+            width: 77mm !important;
+            max-width: 77mm !important;
             padding: 2mm 1.5mm 3mm 1.5mm !important;
-            margin: 0 !important;
+            margin: 0 auto !important;
             box-sizing: border-box !important;
             overflow: visible;
         }
 
-        /* La ticketera ocupa exactamente los mm de la bobina de extremo a extremo */
+        /* La ticketera utiliza 77mm utiles de impresion fisica para no cortar la ultima columna */
         body.thermal-print .ticket {
-            width: {{ (int) ($ticketPageWidthMm ?? 80) }}mm !important;
-            max-width: {{ (int) ($ticketPageWidthMm ?? 80) }}mm !important;
+            width: 77mm !important;
+            max-width: 77mm !important;
             padding-left: 1mm !important;
-            padding-right: 1mm !important;
+            padding-right: 2mm !important;
             box-sizing: border-box !important;
         }
 
@@ -325,18 +325,18 @@
             font-size: 4.2mm;
         }
 
-        /* Tipografía optimizada para la salida física del botón verde. */
-        body.ticket-paper-80.thermal-print .company { font-size: 7.2mm; }
-        body.ticket-paper-80.thermal-print .subhead { font-size: 4.5mm; }
-        body.ticket-paper-80.thermal-print .doc-code { font-size: 5.8mm; }
+        /* Tipografía optimizada para el punto exacto del cabezal térmico. */
+        body.ticket-paper-80.thermal-print .company { font-size: 6.8mm; }
+        body.ticket-paper-80.thermal-print .subhead { font-size: 4.2mm; }
+        body.ticket-paper-80.thermal-print .doc-code { font-size: 5.4mm; }
         body.ticket-paper-80.thermal-print .info-table td,
-        body.ticket-paper-80.thermal-print .totals-table td { font-size: 3.8mm; }
-        body.ticket-paper-80.thermal-print .items-table th { font-size: 3.6mm; }
+        body.ticket-paper-80.thermal-print .totals-table td { font-size: 3.5mm; }
+        body.ticket-paper-80.thermal-print .items-table th { font-size: 3.3mm; }
         body.ticket-paper-80.thermal-print .items-table td {
-            font-size: 3.85mm;
-            line-height: 1.2;
+            font-size: 3.55mm;
+            line-height: 1.18;
         }
-        body.ticket-paper-80.thermal-print .grand-total td { font-size: 4.8mm; }
+        body.ticket-paper-80.thermal-print .grand-total td { font-size: 4.5mm; }
 
         body.ticket-paper-58.thermal-print .info-table td { font-size: 2.9mm; }
         body.ticket-paper-58.thermal-print .items-table th { font-size: 2.7mm; }
