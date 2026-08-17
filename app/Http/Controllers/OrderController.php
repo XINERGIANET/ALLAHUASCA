@@ -2683,10 +2683,12 @@ class OrderController extends Controller
         $requestedName = trim((string) ($validated['printer_name'] ?? '')) ?: $defaultPrinterName;
         $printer = $this->findPrinterBranchForBarTicket($printerBaseQuery, $requestedName, $defaultPrinterName);
         if (! $printer) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No hay una ticketera de barra configurada para la comanda.',
-            ], 422);
+            $printer = new PrinterBranch([
+                'branch_id' => $branchId,
+                'name' => $requestedName ?: 'barra',
+                'status' => 'E',
+                'width' => 80,
+            ]);
         }
 
         $payload = $this->buildKitchenEscPosPayload((string) $validated['ticket_text']);
@@ -2840,10 +2842,12 @@ class OrderController extends Controller
         $printer = $this->findPrinterBranchForBarTicket($printerBaseQuery, $requestedName, $defaultPrinterName);
 
         if (! $printer) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No hay una ticketera de barra configurada para la precuenta.',
-            ], 422);
+            $printer = new PrinterBranch([
+                'branch_id' => $branchId,
+                'name' => $requestedName ?: 'barra',
+                'status' => 'E',
+                'width' => 80,
+            ]);
         }
 
         $payload = $this->buildKitchenEscPosPayload((string) $validated['ticket_text']);
