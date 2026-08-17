@@ -629,11 +629,15 @@
     @endif
 
     @if(!empty($qrImageUrl))
-        <div class="qr-dash">------------------------------------------------------------</div>
+        <table class="items-table" style="margin-top: 2.5mm; margin-bottom: 2.5mm;">
+            <tr class="dash-row"><th colspan="{{ $showUnitColumn ? 5 : 4 }}">------------------------------------------------------------</th></tr>
+        </table>
         <div class="qr-wrap">
             <img src="{{ $qrImageUrl }}" alt="QR del comprobante">
         </div>
-        <div class="qr-dash">------------------------------------------------------------</div>
+        <table class="items-table" style="margin-top: 2.5mm; margin-bottom: 2.5mm;">
+            <tr class="dash-row"><th colspan="{{ $showUnitColumn ? 5 : 4 }}">------------------------------------------------------------</th></tr>
+        </table>
         @if(!empty($ticketFooterMeta))
             <div class="ticket-footer-meta">
                 <div><strong>Pedido:</strong> {{ $ticketFooterMeta['order_number'] }}</div>
@@ -654,7 +658,9 @@
         @endif
     @endif
 
-    <div class="qr-dash">------------------------------------------------------------</div>
+    <table class="items-table" style="margin-top: 2.5mm; margin-bottom: 2.5mm;">
+        <tr class="dash-row"><th colspan="{{ $showUnitColumn ? 5 : 4 }}">------------------------------------------------------------</th></tr>
+    </table>
 
     <div class="footer">
         Impreso: {{ $printedAt->format('d/m/Y H:i:s') }}<br>
