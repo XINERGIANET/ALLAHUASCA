@@ -658,10 +658,6 @@
         @endif
     @endif
 
-    <table class="items-table" style="margin-top: 2.5mm; margin-bottom: 2.5mm;">
-        <tr class="dash-row"><th colspan="{{ $showUnitColumn ? 5 : 4 }}">------------------------------------------------------------</th></tr>
-    </table>
-
     <div class="footer">
         Impreso: {{ $printedAt->format('d/m/Y H:i:s') }}<br>
         <div class="thanks">Gracias por su preferencia</div>
