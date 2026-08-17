@@ -1706,6 +1706,7 @@ class SalesController extends Controller
                             'situation' => 'libre',
                             'opened_at' => null,
                         ]);
+                        \Illuminate\Support\Facades\Cache::forget("table_draft_lock:{$tableId}");
                     }
                 }
             }

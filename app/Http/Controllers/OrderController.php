@@ -1018,6 +1018,10 @@ class OrderController extends Controller
                 $situation = 'libre';
                 $totalWithTax = 0;
                 $elapsed = '--:--';
+                if ($table->situation === 'ocupada') {
+                    Table::where('id', $table->id)->update(['situation' => 'libre', 'opened_at' => null]);
+                }
+                \Illuminate\Support\Facades\Cache::forget("table_draft_lock:{$table->id}");
             }
 
             // Datos del mozo asignado si la mesa está ocupada
@@ -1054,8 +1058,15 @@ class OrderController extends Controller
                 }
             }
 
-            // Si el perfil es Mozo, debemos ocultarle mesas que estén siendo atendidas o tomadas por OTRO mozo
-            $hideForMozo = $isMozo && ($isOccupiedByOther || $isDraftLockedByOther);
+            // Si la mesa está libre, no está ocupada ni bloqueada por nadie
+            if ($situation === 'libre') {
+                $isOccupiedByOther = false;
+                $isDraftLockedByOther = false;
+                $hideForMozo = false;
+            } else {
+                // Si el perfil es Mozo, ocultar mesas ocupadas o en borrador por OTRO mozo
+                $hideForMozo = $isMozo && ($isOccupiedByOther || $isDraftLockedByOther);
+            }
 
             $productsText = '';
             if ($orderMovement && $orderMovement->relationLoaded('details') && $orderMovement->details->isNotEmpty()) {
