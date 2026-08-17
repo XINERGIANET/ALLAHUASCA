@@ -1022,10 +1022,6 @@ class OrderController extends Controller
                 if ($table->situation === 'ocupada') {
                     Table::where('id', $table->id)->update(['situation' => 'libre', 'opened_at' => null]);
                 }
-                $draftLockCheck = \Illuminate\Support\Facades\Cache::get("table_draft_lock:{$table->id}");
-                if (! is_array($draftLockCheck) || empty($draftLockCheck['locked_at']) || (time() - (int)$draftLockCheck['locked_at']) >= 7) {
-                    \Illuminate\Support\Facades\Cache::forget("table_draft_lock:{$table->id}");
-                }
             }
 
             // Datos del mozo asignado si la mesa está ocupada
