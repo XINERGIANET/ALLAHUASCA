@@ -632,11 +632,11 @@
     @endif
 
     @if(!empty($qrImageUrl))
-        <div class="qr-dash">--------------------------------------------------</div>
+        <div class="separator" style="margin-top: 3mm; margin-bottom: 3mm;"></div>
         <div class="qr-wrap">
             <img src="{{ $qrImageUrl }}" alt="QR del comprobante">
         </div>
-        <div class="qr-dash">--------------------------------------------------</div>
+        <div class="separator" style="margin-top: 3mm; margin-bottom: 3mm;"></div>
         @if(!empty($ticketFooterMeta))
             <div class="ticket-footer-meta">
                 <div><strong>Pedido:</strong> {{ $ticketFooterMeta['order_number'] }}</div>
