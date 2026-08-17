@@ -452,15 +452,16 @@
         }
 
         .qr-dash {
-            height: 3.5mm;
-            margin-top: 2mm;
-            margin-bottom: 2mm;
+            width: 100%;
+            height: 3mm;
+            margin-top: 2.5mm;
+            margin-bottom: 2.5mm;
             overflow: hidden;
             white-space: nowrap;
             font-family: "Courier New", monospace;
             font-size: 3mm;
             font-weight: 700;
-            line-height: 3.5mm;
+            line-height: 3mm;
             text-align: center;
         }
 
@@ -533,7 +534,7 @@
         <p class="doc-code">{{ $docCode }}</p>
     </div>
 
-    <div class="separator"></div>
+    <div class="qr-dash">------------------------------------------------------------</div>
 
     <table class="info-table">
         <tr>
@@ -564,7 +565,7 @@
         @endif
     </table>
 
-    <div class="separator"></div>
+    <div class="qr-dash">------------------------------------------------------------</div>
 
     <table class="items-table{{ $showUnitColumn ? ' has-measure-column' : '' }}">
         <thead>
@@ -632,11 +633,11 @@
     @endif
 
     @if(!empty($qrImageUrl))
-        <div class="separator" style="margin-top: 3mm; margin-bottom: 3mm;"></div>
+        <div class="qr-dash">------------------------------------------------------------</div>
         <div class="qr-wrap">
             <img src="{{ $qrImageUrl }}" alt="QR del comprobante">
         </div>
-        <div class="separator" style="margin-top: 3mm; margin-bottom: 3mm;"></div>
+        <div class="qr-dash">------------------------------------------------------------</div>
         @if(!empty($ticketFooterMeta))
             <div class="ticket-footer-meta">
                 <div><strong>Pedido:</strong> {{ $ticketFooterMeta['order_number'] }}</div>
@@ -657,7 +658,7 @@
         @endif
     @endif
 
-    <div class="separator"></div>
+    <div class="qr-dash">------------------------------------------------------------</div>
 
     <div class="footer">
         Impreso: {{ $printedAt->format('d/m/Y H:i:s') }}<br>
