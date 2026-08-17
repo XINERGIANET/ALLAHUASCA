@@ -3959,6 +3959,7 @@ class OrderController extends Controller
                     'situation' => 'libre',
                     'opened_at' => null,
                 ]);
+                \Illuminate\Support\Facades\Cache::forget("table_draft_lock:{$tableIdToFree}");
             }
 
             DB::commit();
