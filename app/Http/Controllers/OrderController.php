@@ -1033,7 +1033,7 @@ class OrderController extends Controller
             $draftLock = \Illuminate\Support\Facades\Cache::get("table_draft_lock:{$table->id}");
             $isDraftLockedByOther = false;
             $lockedByName = null;
-            if (is_array($draftLock) && ! empty($draftLock['locked_at']) && (time() - (int)$draftLock['locked_at']) < 25) {
+            if (is_array($draftLock) && ! empty($draftLock['locked_at']) && (time() - (int)$draftLock['locked_at']) < 7) {
                 $lockUser = (int) ($draftLock['user_id'] ?? 0);
                 $lockPerson = (int) ($draftLock['person_id'] ?? 0);
                 $lockUserName = trim((string) ($draftLock['user_name'] ?? ''));
@@ -1141,7 +1141,7 @@ class OrderController extends Controller
             'person_id' => $currentPersonId,
             'user_name' => $currentUserName,
             'locked_at' => time(),
-        ], 25);
+        ], 7);
 
         return response()->json(['success' => true]);
     }
@@ -1188,12 +1188,14 @@ class OrderController extends Controller
         $currentUserName = trim((string) (auth()->user()?->name ?? session('user_name') ?? 'Mozo'));
 
         // 1. Validar si la mesa ya está ocupada por OTRO mozo
-        $orderMovement = OrderMovement::with('movement')
+        $orderMovement = OrderMovement::with('movement', 'details')
             ->where('table_id', $table->id)
             ->whereIn('status', ['PENDIENTE', 'P'])
             ->orderByDesc('id')
             ->first();
-        if ($orderMovement) {
+        $totalWithTax = $this->orderMovementDisplayTotal($orderMovement);
+
+        if ($orderMovement && $totalWithTax > 0) {
             $assignedUserId = (int) ($orderMovement->movement?->user_id ?? 0);
             $assignedPersonId = (int) ($orderMovement->movement?->person_id ?? 0);
             $isSameUser = ($currentUserId > 0 && $assignedUserId > 0 && $currentUserId === $assignedUserId)
@@ -1204,9 +1206,9 @@ class OrderController extends Controller
             }
         }
 
-        // 2. Validar si la mesa está siendo tomada en borrador por OTRO mozo
+        // 2. Validar si la mesa está siendo tomada en borrador por OTRO mozo (solo si latido activo < 7 segundos)
         $draftLock = \Illuminate\Support\Facades\Cache::get("table_draft_lock:{$table->id}");
-        if (is_array($draftLock) && ! empty($draftLock['locked_at']) && (time() - (int)$draftLock['locked_at']) < 25) {
+        if (is_array($draftLock) && ! empty($draftLock['locked_at']) && (time() - (int)$draftLock['locked_at']) < 7) {
             $lockUser = (int) ($draftLock['user_id'] ?? 0);
             $lockPerson = (int) ($draftLock['person_id'] ?? 0);
             $lockUserName = trim((string) ($draftLock['user_name'] ?? ''));
@@ -1217,15 +1219,17 @@ class OrderController extends Controller
                 $lockName = $lockUserName ?: 'otro mozo';
                 return redirect()->route('orders.index')->with('error', "La Mesa {$table->name} está siendo tomada en este momento por {$lockName}.");
             }
+        } else {
+            \Illuminate\Support\Facades\Cache::forget("table_draft_lock:{$table->id}");
         }
 
-        // 3. Registrar el bloqueo temporal a favor del mozo actual
+        // 3. Registrar el bloqueo temporal a favor del mozo actual (7s TTL, renovado cada 3s por heartbeat)
         \Illuminate\Support\Facades\Cache::put("table_draft_lock:{$table->id}", [
             'user_id' => $currentUserId,
             'person_id' => $currentPersonId,
             'user_name' => $currentUserName,
             'locked_at' => time(),
-        ], 25);
+        ], 7);
 
         $area = $table->area;
         if (! $area && $request->has('area_id')) {
