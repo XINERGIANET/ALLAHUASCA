@@ -31,9 +31,9 @@
         }
 
         .ticket {
-            width: 75mm !important;
-            max-width: 75mm !important;
-            padding: 2mm 1.5mm 3mm 1.5mm !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 2mm 0.5mm 3mm 0.5mm !important;
             margin: 0 auto !important;
             box-sizing: border-box !important;
             overflow: visible;
@@ -41,12 +41,12 @@
             break-inside: avoid !important;
         }
 
-        /* La ticketera utiliza 75mm utiles con 3mm de margen derecho de seguridad */
+        /* La ticketera utiliza el 100% del ancho util sin margen derecho sobrante */
         body.thermal-print .ticket {
-            width: 75mm !important;
-            max-width: 75mm !important;
-            padding-left: 1mm !important;
-            padding-right: 3mm !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            padding-left: 0.5mm !important;
+            padding-right: 0.5mm !important;
             box-sizing: border-box !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
@@ -91,9 +91,9 @@
             }
 
             .ticket {
-                width: {{ (int) ($ticketPageWidthMm ?? 80) }}mm !important;
-                max-width: {{ (int) ($ticketPageWidthMm ?? 80) }}mm !important;
-                padding: 2mm 1.5mm 3mm 1.5mm !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                padding: 2mm 0.5mm 3mm 0.5mm !important;
                 margin: 0 !important;
                 box-sizing: border-box !important;
             }
