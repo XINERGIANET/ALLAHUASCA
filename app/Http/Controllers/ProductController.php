@@ -660,14 +660,17 @@ class ProductController extends Controller
                 // Único por sucursal: el mismo código no puede existir en otra sede con product_branch
                 function ($attribute, $value, $fail) use ($request, $excludeId) {
                     $branchId = (int) ($request->input('branch_id') ?: $request->session()->get('branch_id'));
-                    if (!$branchId || !$value) {
+                    $trimmedCode = trim((string) $value);
+                    if (!$branchId || $trimmedCode === '') {
                         return;
                     }
                     $exists = DB::table('products')
                         ->join('product_branch', 'product_branch.product_id', '=', 'products.id')
-                        ->where('products.code', $value)
+                        ->whereNull('products.deleted_at')
+                        ->whereNull('product_branch.deleted_at')
+                        ->whereRaw('LOWER(TRIM(products.code)) = ?', [strtolower($trimmedCode)])
                         ->where('product_branch.branch_id', $branchId)
-                        ->when($excludeId, fn($q) => $q->where('products.id', '!=', $excludeId))
+                        ->when($excludeId, fn($q) => $q->where('products.id', '!=', (int) $excludeId))
                         ->exists();
                     if ($exists) {
                         $fail('El código ya está registrado en esta sucursal.');
