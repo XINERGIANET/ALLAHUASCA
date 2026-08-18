@@ -790,8 +790,7 @@
                 <input type="number" step="0.01" :name="showBranchDetail ? 'stock' : 'stock_skip'"
                     :required="showBranchDetail" x-model.number="branchFields.stock"
                     x-bind:disabled="disableStockEdit"
-                    :min="Number(branchFields.stock_minimum || 0)"
-                    :max="Number(branchFields.stock_maximum || 0) > 0 ? Number(branchFields.stock_maximum) : undefined"
+                    min="0"
                     class="dark:bg-dark-900 shadow-theme-xs h-11 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm placeholder:text-gray-400 dark:border-gray-700 dark:text-white/90 dark:placeholder:text-white/30"
                     :class="disableStockEdit
                         ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed text-gray-500'

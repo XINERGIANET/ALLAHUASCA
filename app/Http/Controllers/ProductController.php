@@ -641,13 +641,7 @@ class ProductController extends Controller
         $branchRules = [
             'price' => ['nullable', 'numeric', 'min:0'],
             'purchase_price' => ['nullable', 'numeric', 'min:0'],
-            'stock' => array_values(array_filter([
-                'nullable',
-                'numeric',
-                'min:0',
-                'gte:stock_minimum',
-                $request->input('stock_maximum', 0) > 0 ? 'lte:stock_maximum' : null,
-            ])),
+            'stock' => ['nullable', 'numeric', 'min:0'],
             'stock_minimum' => ['nullable', 'numeric', 'min:0'],
             'stock_maximum' => ['nullable', 'numeric', 'min:0', 'gte:stock_minimum'],
             'minimum_sell' => ['nullable', 'numeric', 'min:0'],
