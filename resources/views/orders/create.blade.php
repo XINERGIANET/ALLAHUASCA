@@ -217,7 +217,7 @@
                                     if (window.currentTable && window.currentTable.waiter_id) {
                                         this.waiterId = window.currentTable.waiter_id;
                                     } else if ((window.__orderWaiterOptions || []).length > 0) {
-                                        const firstWaiter = window.__orderWaiterOptions[0];
+                                        const firstWaiter = window.__orderWaiterOptions?.[0];
                                         this.waiterId = firstWaiter?.id ?? null;
                                     }
                                     this.$watch('waiterId', v => {
@@ -1761,7 +1761,7 @@
 
                     function ensureCartStockForCandidate(overrideItem, excludeIndex = null) {
                         const issues = validateRequirementMap(buildCartStockRequirementMap(excludeIndex, overrideItem));
-                        if (!issues.length) return true;
+                        if (!issues || !issues.length) return true;
                         const issue = issues[0];
                         showNotification(
                             issue.strict ? 'Stock insuficiente (insumo)' : 'Stock insuficiente',
@@ -2711,11 +2711,11 @@
                             const qty = parseFloat(it?.qty ?? 1) || 1;
                             const price = parseFloat(it?.price ?? 0) || 0;
                             const amount = qty * price;
-                            const nameLines = wrapText(name, colName);
+                            const nameLines = wrapText(name, colName) || [];
 
                             txt += padEndSafe(formatQty(qty), colQty) +
                                 ' '.repeat(colGap) +
-                                padEndSafe(nameLines[0], colName) +
+                                padEndSafe(nameLines[0] || name, colName) +
                                 padStartSafe(price.toFixed(2), colPrice) +
                                 padStartSafe(amount.toFixed(2), colAmount) + '\n';
 
@@ -3858,7 +3858,7 @@
                                 matches.push(p);
                             }
                         }
-                        if (matches.length !== 1) {
+                        if (!matches || matches.length !== 1 || !matches[0]) {
                             return false;
                         }
                         const pb = findProductBranchByProductId(matches[0].id);
