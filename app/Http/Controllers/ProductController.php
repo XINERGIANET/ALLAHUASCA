@@ -1024,10 +1024,11 @@ class ProductController extends Controller
         }
 
         $user = $request->user();
-        $userId = $user ? $user->id : null;
-        $userName = $user ? $user->name : 'Sistema';
-        $personId = $user ? $user->person_id : null;
-        $personName = $user && $user->person ? $user->person->name : null;
+        $userId = $user ? $user->id : (session('user_id') ?: null);
+        $userName = session('user_name') ?? ($user ? ($user->name ?? $user->username ?? 'Sistema') : 'Sistema');
+        $personId = session('person_id') ?? ($user ? $user->person_id : null);
+        $personName = session('person_fullname') ?? ($user?->person?->name ?? ($user?->person?->description ?? $userName));
+        $responsibleName = $personName ?: $userName;
 
         // 1. Tipo de Movimiento (Almacén / Inventario)
         $movementType = MovementType::where(function ($query) {
