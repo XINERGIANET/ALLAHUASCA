@@ -2920,6 +2920,8 @@ class OrderController extends Controller
 
         return response()->json([
             'success' => true,
+            'payload_b64' => base64_encode($payload),
+            'printer_name' => $printer?->name ?? null,
             'message' => 'Comanda enviada a "' . ($printer->name ?? 'Ticketera') . '"',
         ]);
     }

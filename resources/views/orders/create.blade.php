@@ -3318,6 +3318,25 @@
                             const td = tr.headers.get('content-type')?.includes('application/json') ? await tr.json() :
                                 null;
                             if (tr.ok && td?.success) {
+                                if (td.payload_b64) {
+                                    const qzApi = window.qz;
+                                    const targetPrinter = printerName || td.printer_name;
+                                    if (qzApi && targetPrinter) {
+                                        try {
+                                            const connected = typeof window.__qzConnectWithCertPairFallback === 'function'
+                                                ? await window.__qzConnectWithCertPairFallback(qzApi, targetPrinter)
+                                                : (qzApi.websocket.isActive() || await qzApi.websocket.connect());
+                                            if (connected) {
+                                                await qzApi.printers.find(targetPrinter);
+                                                const config = qzApi.configs.create(targetPrinter);
+                                                await qzApi.print(config, [{ type: 'raw', format: 'command', flavor: 'base64', data: td.payload_b64 }]);
+                                                recordKitchenQzPrint(targetPrinter, ticketText).catch(() => {});
+                                            }
+                                        } catch (qzErr) {
+                                            console.warn('QZ comanda local:', qzErr);
+                                        }
+                                    }
+                                }
                                 return td;
                             }
                             throw new Error(td?.message || ('No se pudo imprimir comanda en "' + (printerName ||
@@ -3348,13 +3367,6 @@
                         const qzAvailable = allowKitchenClientQz && needsClientQz && qzApi && await ensureQzTrayConnected(
                             qzApi, qzKitchenCertHint);
                         let canUseQz = !!qzAvailable;
-                        if (!canUseQz && needsClientQz && allowKitchenClientQz && qzApi) {
-                            if (typeof showNotification === 'function') {
-                                showNotification('Impresión',
-                                    'QZ Tray no disponible para comanda; se intentará impresión por servidor.',
-                                    'warning');
-                            }
-                        }
 
                         function padEnd(str, length) {
                             const s = String(str ?? '');
@@ -3463,29 +3475,9 @@
                                 continue;
                             }
                             try {
-                                if (kitchenComandaPrinterUsesServerThermal(pname)) {
-                                    await sendKitchenTicketToServer(pname, data);
-                                } else if (canUseQz) {
-                                    try {
-                                        await qzApi.printers.find(pname);
-                                        await printTicketWithQz(qzApi, pname, data);
-                                        recordKitchenQzPrint(pname, data).catch((historyError) => {
-                                            console.warn('La comanda se imprimió, pero no se pudo registrar en el historial.', historyError);
-                                        });
-                                    } catch (notFoundErr) {
-                                        const msg = 'QZ no encontró la impresora "' + pname +
-                                            '". Se intentará impresión por servidor.';
-                                        console.warn(msg, notFoundErr);
-                                        if (typeof showNotification === 'function') {
-                                            showNotification('Impresión', msg, 'warning');
-                                        }
-                                        await sendKitchenTicketToServer(pname, data);
-                                    }
-                                } else {
-                                    await sendKitchenTicketToServer(pname, data);
-                                }
+                                await sendKitchenTicketToServer(pname, data);
                             } catch (e) {
-                                console.error('Impresi?n comanda: error al imprimir en ' + pname, e);
+                                console.error('Impresión comanda: error al imprimir en ' + pname, e);
                                 printedDirectly = false;
                                 if (typeof showNotification === 'function') {
                                     showNotification('Comanda', 'No se pudo imprimir en "' + pname + '". ' + (e?.message ||
