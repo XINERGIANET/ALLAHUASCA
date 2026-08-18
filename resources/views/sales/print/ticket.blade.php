@@ -26,14 +26,14 @@
         }
 
         body {
-            font-size: 11.5px;
+            font-size: 10.5px;
             line-height: 1.18;
         }
 
         .ticket {
             width: 100% !important;
             max-width: 100% !important;
-            padding: 1mm 0 3mm 0 !important;
+            padding: 2mm 0.5mm 3mm 0.5mm !important;
             margin: 0 auto !important;
             box-sizing: border-box !important;
             overflow: visible;
@@ -45,8 +45,8 @@
         body.thermal-print .ticket {
             width: 100% !important;
             max-width: 100% !important;
-            padding-left: 0 !important;
-            padding-right: 0 !important;
+            padding-left: 0.5mm !important;
+            padding-right: 0.5mm !important;
             box-sizing: border-box !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
@@ -93,7 +93,7 @@
             .ticket {
                 width: 100% !important;
                 max-width: 100% !important;
-                padding: 1mm 0 3mm 0 !important;
+                padding: 2mm 0.5mm 3mm 0.5mm !important;
                 margin: 0 !important;
                 box-sizing: border-box !important;
             }
