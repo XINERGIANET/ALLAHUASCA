@@ -5660,7 +5660,7 @@
                                 const td = tr.headers.get('content-type')?.includes('application/json') ? await tr.json() :
                                     null;
                                 if (tr.ok && td?.duplicate_skipped) return;
-                                if (!tr.ok || !td?.success || (!td?.ticket_pdf_b64 && !td?.payload_b64)) {
+                                if (!tr.ok || !td?.success || (!td?.payload_b64 && !td?.ticket_pdf_b64)) {
                                     throw new Error(td?.message || 'No se pudo obtener el ticket del servidor.');
                                 }
                                 let currentPrinterName = printerName || td.printer_name || '';
@@ -5685,7 +5685,14 @@
                                     ...sizeOpts,
                                     scaleContent: false
                                 });
-                                if (td.ticket_pdf_b64 && td.qz_print_format === 'pdf') {
+                                if (td.payload_b64) {
+                                    await qzApi.print(configRaw, [{
+                                        type: 'raw',
+                                        format: 'command',
+                                        flavor: 'base64',
+                                        data: td.payload_b64
+                                    }]);
+                                } else if (td.ticket_pdf_b64 && td.qz_print_format === 'pdf') {
                                     try {
                                         await qzApi.print(configPdf, [{
                                             type: 'pixel',
@@ -5697,12 +5704,6 @@
                                         console.warn('QZ Tray: resultado PDF incierto; no se reintenta para evitar duplicados', pdfErr);
                                         throw pdfErr;
                                     }
-                                } else {
-                                    await qzApi.print(configRaw, [{
-                                        type: 'raw',
-                                        format: 'base64',
-                                        data: td.payload_b64
-                                    }]);
                                 }
                                 if (typeof showNotification === 'function')
                                     showNotification('Impresión', 'Comprobante enviado a "' + currentPrinterName + '".',

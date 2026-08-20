@@ -1717,7 +1717,7 @@ es                        style="max-height: 80vh;">
                         const td = tr.headers.get('content-type')?.includes('application/json') ? await tr.json() :
                             null;
                         if (tr.ok && td?.duplicate_skipped) return;
-                        if (!tr.ok || !td?.success || (!td?.ticket_pdf_b64 && !td?.ticket_html_b64)) {
+                        if (!tr.ok || !td?.success || (!td?.payload_b64 && !td?.ticket_pdf_b64 && !td?.ticket_html_b64)) {
                             openSaleTicketPdfTab(movementId);
                             return;
                         }
@@ -1736,13 +1736,29 @@ es                        style="max-height: 80vh;">
                             rasterize: false,
                             colorType: 'blackwhite'
                         });
+                        const configRaw = qzApi.configs.create(printerName, {
+                            units: 'mm',
+                            size: {
+                                width: paperMm,
+                                height: paperHeight
+                            },
+                            margins: 0,
+                            scaleContent: false
+                        });
                         const printHtmlTicket = () => qzApi.print(configPdf, [{
                             type: 'pixel',
                             format: 'html',
                             flavor: 'base64',
                             data: td.ticket_html_b64
                         }]);
-                        if (td.ticket_pdf_b64 && td.qz_print_format === 'pdf') {
+                        if (td.payload_b64) {
+                            await qzApi.print(configRaw, [{
+                                type: 'raw',
+                                format: 'command',
+                                flavor: 'base64',
+                                data: td.payload_b64
+                            }]);
+                        } else if (td.ticket_pdf_b64 && td.qz_print_format === 'pdf') {
                             try {
                                 await qzApi.print(configPdf, [{
                                     type: 'pixel',
