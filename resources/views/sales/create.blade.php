@@ -126,6 +126,12 @@ es                        style="max-height: 80vh;">
                                             class="shrink-0 text-right tabular-nums text-slate-700 dark:text-slate-300 whitespace-nowrap"
                                             id="ticket-tax">S/ 0.00</span>
                                     </div>
+                                    <div id="ticket-discount-row"
+                                        class="hidden w-full min-w-0 items-baseline justify-between gap-3 text-red-600 dark:text-red-400 font-semibold">
+                                        <span class="shrink-0">Descuento</span>
+                                        <span class="shrink-0 text-right tabular-nums whitespace-nowrap"
+                                            id="ticket-discount">- S/ 0.00</span>
+                                    </div>
                                     <div class="border-t border-dashed border-gray-300 dark:border-gray-600 my-2"></div>
                                     <div class="flex w-full min-w-0 items-center justify-between gap-3">
                                         <span
@@ -243,6 +249,32 @@ es                        style="max-height: 80vh;">
                                         @endif
                                     </div>
                                 @endif
+                                <div>
+                                    <label
+                                        class="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">Descuento</label>
+                                    <div
+                                        class="rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/60 p-3">
+                                        <div class="grid grid-cols-[96px_1fr] gap-2">
+                                            <select id="cobro-discount-type"
+                                                class="w-full py-2 px-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-semibold focus:ring-2 focus:ring-[#111827]/30 focus:border-[#111827] outline-none"
+                                                onchange="setCobroDiscountType(this.value)">
+                                                <option value="amount">S/</option>
+                                                <option value="percent">%</option>
+                                            </select>
+                                            <input type="number" id="cobro-discount-value" min="0" step="0.01"
+                                                value="0.00"
+                                                class="w-full py-2 px-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm tabular-nums focus:ring-2 focus:ring-[#111827]/30 focus:border-[#111827] outline-none"
+                                                oninput="setCobroDiscountValue(this.value)" onblur="normalizeCobroDiscountInput()">
+                                        </div>
+                                        <div class="mt-2 flex items-center justify-between gap-3 text-xs">
+                                            <span class="font-semibold text-gray-600 dark:text-gray-300">Total con
+                                                descuento</span>
+                                            <span id="cobro-discounted-total"
+                                                class="font-black tabular-nums text-slate-900 dark:text-white">S/
+                                                0.00</span>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div>
                                     <div class="flex items-center justify-between mb-2">
                                         <label
@@ -447,14 +479,30 @@ es                        style="max-height: 80vh;">
             function calculateTotalsFromItems(items) {
                 let subtotal = 0,
                     tax = 0,
-                    total = 0;
-                (items || []).forEach(item => {
+                    total = 0,
+                    discount = 0;
+                const lines = (items || []).map(item => {
                     const qty = parseFloat(item.qty) || 0;
                     const courtesyQty = Math.min(parseFloat(item.courtesyQty) || 0, qty);
                     const paidQty = Math.max(0, qty - courtesyQty);
                     const price = parseFloat(item.price) || 0;
-                    const lineTotal = paidQty * price;
+                    const grossTotal = paidQty * price;
                     const rate = (taxRateByProductId.get(Number(item.pId)) ?? defaultTaxPct) / 100;
+                    return { item, paidQty, grossTotal, rate };
+                });
+                const grossTotal = lines.reduce((sum, line) => sum + line.grossTotal, 0);
+                const discountMeta = getCobroDiscountMeta(grossTotal);
+                discount = discountMeta.amount;
+                lines.forEach((line, idx) => {
+                    let lineDiscount = 0;
+                    if (discount > 0 && grossTotal > 0) {
+                        lineDiscount = idx === lines.length - 1
+                            ? discount - lines.slice(0, -1).reduce((sum, prev) => sum + (prev.discountAmount || 0), 0)
+                            : Math.round((discount * (line.grossTotal / grossTotal)) * 100) / 100;
+                    }
+                    line.discountAmount = Math.max(0, Math.min(line.grossTotal, lineDiscount));
+                    const lineTotal = Math.max(0, line.grossTotal - line.discountAmount);
+                    const rate = line.rate;
                     const lineSubtotal = rate > 0 ? (lineTotal / (1 + rate)) : lineTotal;
                     subtotal += lineSubtotal;
                     tax += lineTotal - lineSubtotal;
@@ -463,7 +511,32 @@ es                        style="max-height: 80vh;">
                 return {
                     subtotal: Math.round(subtotal * 100) / 100,
                     tax: Math.round(tax * 100) / 100,
-                    total: Math.round(total * 100) / 100
+                    total: Math.round(total * 100) / 100,
+                    grossTotal: Math.round(grossTotal * 100) / 100,
+                    discount: Math.round(discount * 100) / 100,
+                    discountType: discountMeta.type,
+                    discountValue: discountMeta.value
+                };
+            }
+
+            function getCobroDiscountMeta(grossTotal) {
+                const saleDiscount = currentSale.discount || {};
+                const type = saleDiscount.type === 'percent' ? 'percent' : 'amount';
+                let value = parseFloat(String(saleDiscount.value ?? 0).replace(',', '.')) || 0;
+                value = Math.max(0, value);
+                if (type === 'percent') {
+                    value = Math.min(100, value);
+                    return {
+                        type,
+                        value,
+                        amount: Math.round((Math.max(0, grossTotal) * value / 100) * 100) / 100
+                    };
+                }
+                value = Math.min(Math.max(0, grossTotal), value);
+                return {
+                    type,
+                    value,
+                    amount: Math.round(value * 100) / 100
                 };
             }
 
@@ -606,7 +679,17 @@ es                        style="max-height: 80vh;">
                 clientName: 'Publico General',
                 status: 'in_progress',
                 items: [],
+                discount: {
+                    type: 'amount',
+                    value: 0
+                },
             };
+            if (!currentSale.discount || typeof currentSale.discount !== 'object') {
+                currentSale.discount = {
+                    type: 'amount',
+                    value: 0
+                };
+            }
 
             db[activeKey] = currentSale;
             localStorage.setItem('restaurantDB', JSON.stringify(db));
@@ -632,7 +715,7 @@ es                        style="max-height: 80vh;">
                     productsToShow = products;
                 } else if (selectedCategoryId === CATEGORY_FAVORITES_ID) {
                     productsToShow = products.filter(p => isProductFavoriteSales(p.id));
-                } else {
+                } else if (total > 0.009) {
                     productsToShow = products.filter(p => p.category_id == selectedCategoryId);
                 }
 
@@ -906,27 +989,65 @@ es                        style="max-height: 80vh;">
                     });
                 }
 
-                let subtotalBase = 0;
-                let tax = 0;
-                (currentSale.items || []).forEach((item) => {
-                    const qty = Number(item.qty) || 0;
-                    const courtesyQty = Math.min(Number(item.courtesyQty) || 0, qty);
-                    const paidQty = Math.max(0, qty - courtesyQty);
-                    const itemTotal = (Number(item.price) || 0) * paidQty;
-                    const taxPct = taxRateByProductId.get(Number(item.pId)) ?? defaultTaxPct;
-                    const taxVal = taxPct / 100;
-                    const itemSubtotal = taxVal > 0 ? itemTotal / (1 + taxVal) : itemTotal;
-                    subtotalBase += itemSubtotal;
-                    tax += itemTotal - itemSubtotal;
-                });
-                const total = subtotalBase + tax;
+                const totals = calculateTotalsFromItems(currentSale.items || []);
+                const subtotalBase = totals.subtotal;
+                const tax = totals.tax;
+                const total = totals.total;
 
                 document.getElementById('ticket-subtotal').innerText = 'S/ ' + subtotalBase.toFixed(2);
                 document.getElementById('ticket-tax').innerText = 'S/ ' + tax.toFixed(2);
                 document.getElementById('ticket-total').innerText = 'S/ ' + total.toFixed(2);
+                const discountRow = document.getElementById('ticket-discount-row');
+                const discountEl = document.getElementById('ticket-discount');
+                if (discountRow && discountEl) {
+                    discountRow.classList.toggle('hidden', totals.discount <= 0.009);
+                    discountRow.classList.toggle('flex', totals.discount > 0.009);
+                    discountEl.textContent = '- S/ ' + totals.discount.toFixed(2);
+                }
+                syncCobroDiscountControls(totals);
 
                 // Actualizar montos de Cobro dinámicamente cuando cambia el carrito
                 syncCobroAmountsWithCart(total);
+            }
+
+            function syncCobroDiscountControls(totals) {
+                const typeEl = document.getElementById('cobro-discount-type');
+                const valueEl = document.getElementById('cobro-discount-value');
+                const totalEl = document.getElementById('cobro-discounted-total');
+                if (typeEl && typeEl.value !== (currentSale.discount?.type || 'amount')) {
+                    typeEl.value = currentSale.discount?.type || 'amount';
+                }
+                if (valueEl && document.activeElement !== valueEl) {
+                    valueEl.value = (parseFloat(currentSale.discount?.value || 0) || 0).toFixed(2);
+                }
+                if (totalEl) totalEl.textContent = 'S/ ' + (totals?.total || 0).toFixed(2);
+            }
+
+            function setCobroDiscountType(type) {
+                currentSale.discount = currentSale.discount || {};
+                currentSale.discount.type = type === 'percent' ? 'percent' : 'amount';
+                currentSale.discount.value = Math.max(0, parseFloat(currentSale.discount.value || 0) || 0);
+                saveDB();
+                renderTicket();
+            }
+
+            function setCobroDiscountValue(value) {
+                currentSale.discount = currentSale.discount || {};
+                currentSale.discount.type = currentSale.discount.type === 'percent' ? 'percent' : 'amount';
+                currentSale.discount.value = Math.max(0, parseFloat(String(value || 0).replace(',', '.')) || 0);
+                saveDB();
+                renderTicket();
+            }
+
+            function normalizeCobroDiscountInput() {
+                const grossTotal = calculateTotalsFromItems(currentSale.items || []).grossTotal;
+                const meta = getCobroDiscountMeta(grossTotal);
+                currentSale.discount = {
+                    type: meta.type,
+                    value: meta.value
+                };
+                saveDB();
+                renderTicket();
             }
 
             function syncCobroAmountsWithCart(orderTotal) {
@@ -1745,6 +1866,8 @@ es                        style="max-height: 80vh;">
                     person_id: personId,
                     sale_payment_mode: saleMode,
                     credit_days: creditDays,
+                    discount_type: totals.discountType,
+                    discount_value: totals.discountValue,
                     payment_methods: paymentMethodsData.map(pm => ({
                         payment_method_id: pm.payment_method_id,
                         amount: parseFloat(pm.amount) || 0,
@@ -1913,6 +2036,9 @@ es                        style="max-height: 80vh;">
             window.clearCobroClient = clearCobroClient;
             window.addCobroPaymentMethod = addCobroPaymentMethod;
             window.updateCobroTotalPaid = updateCobroTotalPaid;
+            window.setCobroDiscountType = setCobroDiscountType;
+            window.setCobroDiscountValue = setCobroDiscountValue;
+            window.normalizeCobroDiscountInput = normalizeCobroDiscountInput;
             window.autocompleteCobroAmount = autocompleteCobroAmount;
             window.toggleCobroExtraFields = toggleCobroExtraFields;
             window.toggleCobroSaleMode = toggleCobroSaleMode;

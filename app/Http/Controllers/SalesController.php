@@ -634,6 +634,8 @@ class SalesController extends Controller
                 'payment_methods.*.bank_id' => 'nullable|integer|exists:banks,id',
                 'sale_payment_mode' => 'nullable|string|in:CONTADO,CREDITO',
                 'credit_days' => 'nullable|integer|min:0|max:3650',
+                'discount_type' => 'nullable|string|in:amount,percent',
+                'discount_value' => 'nullable|numeric|min:0',
                 'notes' => 'nullable|string',
                 'movement_id' => 'nullable|integer|exists:movements,id', // ID del borrador a completar
             ]);
@@ -677,7 +679,12 @@ class SalesController extends Controller
         }
         // ──────────────────────────────────────────────────────────────────────
 
-        $calcPreview = $this->calculateSubtotalAndTaxFromItems($request->items, $branchIdForCheck);
+        $calcPreview = $this->calculateSubtotalAndTaxFromItems(
+            $request->items,
+            $branchIdForCheck,
+            $request->input('discount_type'),
+            (float) $request->input('discount_value', 0)
+        );
         $totalPreview = round((float) $calcPreview['total'], 2);
 
         $isDraft = $request->has('movement_id') && $request->movement_id;
@@ -712,7 +719,7 @@ class SalesController extends Controller
             if ($pmSum > $totalPreview + 0.02) {
                 return response()->json(['success' => false, 'message' => 'El total abonado no puede superar el importe de la venta.'], 422);
             }
-        } else {
+        } elseif ($totalPreview > 0.009) {
             if (count($pmRaw) < 1) {
                 return response()->json(['success' => false, 'message' => 'Agregue al menos un método de pago.'], 422);
             }
@@ -739,6 +746,8 @@ class SalesController extends Controller
                     return response()->json(['success' => false, 'message' => 'Método de pago no permitido en esta sucursal.'], 422);
                 }
             }
+        } elseif ($pmSum > 0.02) {
+            return response()->json(['success' => false, 'message' => 'No agregue pagos cuando el total de la venta es cero.'], 422);
         }
 
         try {
@@ -812,7 +821,12 @@ class SalesController extends Controller
             }
 
             // Los precios del front ya incluyen IGV. Calcular subtotal e IGV por producto según su tasa.
-            $calculated = $this->calculateSubtotalAndTaxFromItems($request->items, $branchId);
+            $calculated = $this->calculateSubtotalAndTaxFromItems(
+                $request->items,
+                $branchId,
+                $request->input('discount_type'),
+                (float) $request->input('discount_value', 0)
+            );
             $subtotal = $calculated['subtotal'];
             $tax = $calculated['tax'];
             $total = $calculated['total'];
@@ -930,8 +944,10 @@ class SalesController extends Controller
                 ]);
             }
 
+            $calculatedLines = collect($calculated['lines'] ?? [])->keyBy('index');
+
             // Crear SalesMovementDetails y actualizar stock (nota por producto en comment)
-            foreach ($validated['items'] as $item) {
+            foreach ($validated['items'] as $itemIndex => $item) {
                 $product = Product::with('baseUnit')->findOrFail($item['pId']);
 
                 $roundUpToQuarter = function (float $qty): float {
@@ -1057,7 +1073,11 @@ class SalesController extends Controller
                 $courtesyQty = max(0, min($courtesyQty, $qty));
                 $paidQty = $qty - $courtesyQty;
                 // Precio de venta incluye impuesto; el monto es solo por unidades pagadas (sin cortesía).
-                $itemTotal = $paidQty * (float) ($item['price'] ?? 0);
+                $lineCalc = $calculatedLines->get($itemIndex);
+                $grossItemTotal = $paidQty * (float) ($item['price'] ?? 0);
+                $itemTotal = round((float) ($lineCalc['total'] ?? $grossItemTotal), 6);
+                $discountAmount = round(max(0, $grossItemTotal - $itemTotal), 6);
+                $discountPercentage = $grossItemTotal > 0 ? round(($discountAmount / $grossItemTotal) * 100, 6) : 0.0;
                 $itemSubtotal = $taxRateValue > 0 ? ($itemTotal / (1 + $taxRateValue)) : $itemTotal;
                 $itemTax = $itemTotal - $itemSubtotal;
 
@@ -1086,8 +1106,8 @@ class SalesController extends Controller
                     'quantity' => $item['qty'],
                     'courtesy_quantity' => $courtesyQty,
                     'amount' => $itemTotal,
-                    'discount_percentage' => 0.000000,
-                    'original_amount' => $itemSubtotal,
+                    'discount_percentage' => $discountPercentage,
+                    'original_amount' => $grossItemTotal,
                     'comment' => $detailNote,
                     'parent_detail_id' => null,
                     'complements' => [],
@@ -2895,15 +2915,17 @@ class SalesController extends Controller
      * Calcula subtotal, IGV y total desde los ítems usando la tasa de impuesto de cada producto.
      * Usa la tasa configurada en ProductBranch->TaxRate; si no tiene, usa la tasa por defecto del sistema.
      */
-    private function calculateSubtotalAndTaxFromItems(array $items, int $branchId): array
+    private function calculateSubtotalAndTaxFromItems(array $items, int $branchId, ?string $discountType = null, float $discountValue = 0.0): array
     {
         $branchTaxRate = $this->getBranchIgvDefectoTaxRate($branchId);
         $defaultTaxPct = $branchTaxRate ? ((float) $branchTaxRate->tax_rate / 100) : 0.18;
+        $lineDrafts = [];
+        $grossTotal = 0.0;
         $subtotal = 0.0;
         $tax = 0.0;
         $total = 0.0;
 
-        foreach ($items as $item) {
+        foreach ($items as $idx => $item) {
             $productBranch = ProductBranch::with('taxRate')
                 ->where('product_id', $item['pId'])
                 ->where('branch_id', $branchId)
@@ -2916,19 +2938,54 @@ class SalesController extends Controller
             $courtesyQty = (float) ($item['courtesyQty'] ?? $item['courtesy_quantity'] ?? 0);
             $courtesyQty = max(0, min($courtesyQty, $qty));
             $paidQty = $qty - $courtesyQty;
-            $itemTotal = $paidQty * (float) ($item['price'] ?? 0);
+            $itemTotal = round($paidQty * (float) ($item['price'] ?? 0), 6);
+            $grossTotal += $itemTotal;
+            $lineDrafts[] = [
+                'index' => $idx,
+                'gross_total' => $itemTotal,
+                'tax_rate' => $taxRateValue,
+            ];
+        }
+
+        $discountType = $discountType === 'percent' ? 'percent' : 'amount';
+        $discountValue = max(0.0, $discountValue);
+        $discountAmount = $discountType === 'percent'
+            ? round($grossTotal * min(100.0, $discountValue) / 100, 2)
+            : round(min($grossTotal, $discountValue), 2);
+
+        $allocatedDiscount = 0.0;
+        $lastIdx = count($lineDrafts) - 1;
+        foreach ($lineDrafts as $idx => $draft) {
+            $lineGross = (float) $draft['gross_total'];
+            $lineDiscount = 0.0;
+            if ($discountAmount > 0 && $grossTotal > 0) {
+                $lineDiscount = $idx === $lastIdx
+                    ? round($discountAmount - $allocatedDiscount, 2)
+                    : round($discountAmount * ($lineGross / $grossTotal), 2);
+            }
+            $lineDiscount = max(0.0, min($lineGross, $lineDiscount));
+            $allocatedDiscount += $lineDiscount;
+            $itemTotal = round($lineGross - $lineDiscount, 6);
+            $taxRateValue = (float) $draft['tax_rate'];
             $itemSubtotal = $taxRateValue > 0 ? ($itemTotal / (1 + $taxRateValue)) : $itemTotal;
             $itemTax = $itemTotal - $itemSubtotal;
 
             $subtotal += $itemSubtotal;
             $tax += $itemTax;
             $total += $itemTotal;
+            $lineDrafts[$idx]['discount_amount'] = round($lineDiscount, 6);
+            $lineDrafts[$idx]['total'] = $itemTotal;
+            $lineDrafts[$idx]['subtotal'] = round($itemSubtotal, 6);
+            $lineDrafts[$idx]['tax'] = round($itemTax, 6);
         }
 
         return [
             'subtotal' => round($subtotal, 2),
             'tax' => round($tax, 2),
             'total' => round($total, 2),
+            'gross_total' => round($grossTotal, 2),
+            'discount_amount' => round($discountAmount, 2),
+            'lines' => $lineDrafts,
         ];
     }
 
