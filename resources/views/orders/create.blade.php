@@ -2777,14 +2777,7 @@
                     function resolvePreAccountPrinterName() {
                         const configuredPrinter = String(window.__receiptPrinterName || '').trim();
                         if (configuredPrinter) return configuredPrinter;
-                        try {
-                            const localPrinter = String(localStorage.getItem('xinergia_local_printer_name') ||
-                                localStorage.getItem('xinergia_print_bridge_printer') || '').trim();
-                            if (localPrinter && localPrinter !== '*') return localPrinter;
-                        } catch (e) {}
-                        const host = String(window.location.hostname || '').trim().toLowerCase();
-                        const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(host);
-                        return isLocalhost ? 'BARRA' : 'BARRA2';
+                        return '';
                     }
 
                     function requiresStrictLocalQz(printerName) {
@@ -2992,8 +2985,8 @@
                     }
 
                     /**
-                     * Solo en PC terminal (default BARRA2 / cert qz2): comanda vía QZ en el navegador.
-                     * En PC principal (default BARRA): sin QZ en comanda (evita Allow) — solo servidor / ticketera con IP.
+                     * Solo en PC terminal con impresora configurada: comanda vía QZ en el navegador.
+                     * Si la ticketera tiene IP, se usa impresión por servidor para evitar permisos extra.
                      * En celulares (sin QZ Tray): false → comanda por servidor (misma PC que Laravel o ticketera con IP en LAN).
                      */
                     function kitchenComandaAllowClientQz() {
@@ -5613,8 +5606,8 @@
                         const strictLocalQz = requiresStrictLocalQz(printerName);
                         const body = {
                             movement_id: movementId,
-                            printer_name: printerName || null
                         };
+                        if (printerName) body.printer_name = printerName;
                         if (printerId) body.printer_id = printerId;
 
                         // Prioridad 1: impresión RAW por la IP configurada.

@@ -1345,7 +1345,7 @@ class OrderController extends Controller
                     'tax_rate' => $taxRatePct,
                     'favorite' => ($productBranch->favorite ?? 'N'),
                     // compat (1 impresora)
-                    'qz_printer_name' => request()->ip() === '127.0.0.1' || request()->ip() === '::1' ? ($printerNames[0] ?? null) : 'BARRA2',
+                    'qz_printer_name' => $printerNames[0] ?? null,
                     // recomendado (varias impresoras por pivote)
                     'qz_printer_names' => $printerNames,
                     // recomendado: info completa para formateo por ticketera
@@ -1728,7 +1728,7 @@ class OrderController extends Controller
                     'stock' => (float) ($productBranch->stock ?? 0),
                     'tax_rate' => $taxRatePct,
                     'favorite' => ($productBranch->favorite ?? 'N'),
-                    'qz_printer_name' => request()->ip() === '127.0.0.1' || request()->ip() === '::1' ? ($printerNames[0] ?? null) : 'BARRA2',
+                    'qz_printer_name' => $printerNames[0] ?? null,
                     'qz_printer_names' => $printerNames,
                     'qz_printers' => $printers,
                 ];
@@ -3209,9 +3209,9 @@ class OrderController extends Controller
     }
 
     /**
-     * Comanda / precuenta: resuelve la fila de ticketera por nombre sin confundir BARRA con BARRA2
+     * Comanda / precuenta: resuelve la fila exacta de ticketera por nombre configurado.
      * cuando un LIKE "barra%" o el orden de filas en BD entregaba la impresora incorrecta
-     * (móvil en la LAN enviando comanda a BARRA2 por USB vía IP en otra PC).
+     * (móvil en la LAN enviando comanda a una ticketera por USB vía IP en otra PC).
      */
     private function findPrinterBranchForBarTicket($printerBaseQuery, string $requestedName, string $defaultPrinterName): ?PrinterBranch
     {
@@ -3254,7 +3254,7 @@ class OrderController extends Controller
     }
 
     /**
-     * Comanda / precuenta hacia BARRA2: cola persistente; la PC con QZ activa el puente.
+     * Comanda / precuenta hacia ticketera USB/remota: cola persistente; la PC con QZ activa el puente.
      */
     private function maybeQueuePrintBridge(PrinterBranch $printer, int $branchId, string $escposPayload, string $kind = 'comanda', bool $remoteRequest = false, ?\App\Models\PrintJob $existingJob = null): ?\Illuminate\Http\JsonResponse
     {
@@ -3264,7 +3264,7 @@ class OrderController extends Controller
         }
         $job = $existingJob ?: $queue->push($branchId, (string) $printer->name, $escposPayload, $kind);
         if ($kind === 'precuenta') {
-            $msg = 'Precuenta en cola para la estación (QZ en la PC con BARRA2). En esa PC, inicie sesión y active el puente (página /print-bridge/worker o “escuchar en todas las pantallas”).';
+            $msg = 'Precuenta en cola para la estación de impresión. En esa PC, inicie sesión y active el puente (página /print-bridge/worker o “escuchar en todas las pantallas”).';
 
             return response()->json([
                 'success' => true,
@@ -3276,7 +3276,7 @@ class OrderController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Comanda en cola para la estación (QZ en la PC con BARRA2). En esa PC, misma sucursal en sesión y puente activo (/print-bridge/worker o escuchar en todas las pantallas).',
+            'message' => 'Comanda en cola para la estación de impresión. En esa PC, misma sucursal en sesión y puente activo (/print-bridge/worker o escuchar en todas las pantallas).',
             'print_bridge' => true,
             'print_job_id' => $job->id,
         ]);

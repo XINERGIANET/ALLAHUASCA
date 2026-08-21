@@ -1,7 +1,7 @@
 import './qz-tray-init.js';
 
 /**
- * PC estación (BARRA2 USB + QZ/qz2): escucha la cola del servidor (móvil → Laravel → caché).
+ * PC estación (USB + QZ): escucha la cola del servidor (móvil → Laravel → caché).
  * Activar una vez: localStorage xinergia_print_bridge_station = '1' (p. ej. desde /print-bridge/worker).
  */
 export function startPrintBridgeStationPoll() {
@@ -19,7 +19,13 @@ export function startPrintBridgeStationPoll() {
     const getPrinter = () => {
         try {
             const stored = localStorage.getItem('xinergia_print_bridge_printer') || '*';
-            return stored === '*' ? '' : stored;
+            if (stored === '*') return '';
+            const allowed = Array.isArray(window.__printBridgePrinterNames) ? window.__printBridgePrinterNames : [];
+            if (allowed.length > 0 && !allowed.some((name) => String(name).trim().toLowerCase() === String(stored).trim().toLowerCase())) {
+                localStorage.removeItem('xinergia_print_bridge_printer');
+                return '';
+            }
+            return stored;
         } catch (e) {
             return '';
         }

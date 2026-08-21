@@ -12,8 +12,8 @@ class PrintBridgeQueue
     public function stationPrinterNames(): array
     {
         $names = array_merge(
-            config('qz.secondary_first_printer_names', ['BARRA2']),
-            config('qz.tertiary_first_printer_names', ['BARRA3'])
+            config('qz.secondary_first_printer_names', []),
+            config('qz.tertiary_first_printer_names', [])
         );
 
         return array_values(array_unique(array_filter(array_map('trim', $names))));
@@ -63,6 +63,13 @@ class PrintBridgeQueue
         return DB::transaction(function () use ($branchId, $printerName) {
             $job = PrintJob::query()
                 ->where('branch_id', $branchId)
+                ->whereExists(function ($exists) {
+                    $exists->select(DB::raw(1))
+                        ->from('printers_branch')
+                        ->whereColumn('printers_branch.branch_id', 'print_jobs.branch_id')
+                        ->where('printers_branch.status', 'E')
+                        ->whereRaw('LOWER(TRIM(printers_branch.name)) = LOWER(TRIM(print_jobs.printer_name))');
+                })
                 ->when(filled($printerName), fn ($query) => $query->whereRaw(
                     'LOWER(TRIM(printer_name)) = ?',
                     [mb_strtolower(trim((string) $printerName))]

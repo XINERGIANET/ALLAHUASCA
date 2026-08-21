@@ -244,7 +244,7 @@ export function configureQzSecurityForPair(pair) {
 /**
  * Intenta conectar a QZ Tray probando cada par de certificado en orden.
  * @param {object} qzApi instancia qz-tray
- * @param {string} [printerName] si es BARRA2, se fuerza orden secondary → primary sin conectar antes con primary.
+ * @param {string} [printerName] si coincide con la lista configurada, se fuerza el par de certificado correspondiente.
  */
 async function connectQzWithCertPairFallbackInternal(qzApi, printerName) {
     if (!qzApi) {
@@ -258,7 +258,7 @@ async function connectQzWithCertPairFallbackInternal(qzApi, printerName) {
             if (window.__qzSelectedCertPair === 'secondary') {
                 return true;
             }
-            console.warn('[QZ Xinergia] Sesión QZ activa pero no usa certificado secondary; desconectando para BARRA2.');
+            console.warn('[QZ Xinergia] Sesión QZ activa pero no usa el certificado requerido; desconectando para reconectar.');
             try {
                 await qzApi.websocket.disconnect();
             } catch (e) {
@@ -358,7 +358,7 @@ function warmQzConnection() {
         const qzLib = getQz();
         if (!qzLib || qzLib.websocket.isActive()) return;
         const cfg = window.__qzConfig || {};
-        const printer = String(cfg.defaultPrinterName || cfg.printerName || 'BARRA2').trim();
+    const printer = String(cfg.defaultPrinterName || cfg.printerName || '').trim();
         await connectQzWithCertPairFallback(qzLib, printer).catch(() => false);
     };
     if ('requestIdleCallback' in window) {
@@ -391,13 +391,24 @@ export async function openCashDrawer(printerName) {
                             localStorage.getItem('xinergia_print_bridge_printer') || '';
         } catch (e) {}
     }
+    const allowedPrinters = Array.isArray(window.__printBridgePrinterNames) ? window.__printBridgePrinterNames : [];
+    if (targetPrinter && targetPrinter !== '*' && allowedPrinters.length > 0 && !allowedPrinters.some((name) => String(name).trim().toLowerCase() === String(targetPrinter).trim().toLowerCase())) {
+        try {
+            localStorage.removeItem('xinergia_local_printer_name');
+            localStorage.removeItem('xinergia_print_bridge_printer');
+        } catch (e) {}
+        targetPrinter = '';
+    }
     if (!targetPrinter && getQz()?.printers?.getDefault) {
         try {
             targetPrinter = await getQz().printers.getDefault();
         } catch (e) {}
     }
     if (!targetPrinter) {
-        targetPrinter = String(cfg.defaultPrinterName || cfg.printerName || 'BARRA2').trim();
+        targetPrinter = String(cfg.defaultPrinterName || cfg.printerName || '').trim();
+    }
+    if (targetPrinter && targetPrinter !== '*' && allowedPrinters.length > 0 && !allowedPrinters.some((name) => String(name).trim().toLowerCase() === String(targetPrinter).trim().toLowerCase())) {
+        targetPrinter = '';
     }
 
     console.log('[2/4] Impresora de destino resuelta:', targetPrinter);

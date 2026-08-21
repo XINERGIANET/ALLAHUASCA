@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\CashRegister;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
 
 use App\Services\PrintBridgeQueue;
 
@@ -65,7 +66,10 @@ class CashRegisterController extends Controller
         }
 
         if (!$printerName) {
-            $printerName = 'BARRA2';
+            return response()->json([
+                'success' => false,
+                'message' => 'No hay impresora configurada para abrir el cajon en esta sucursal.',
+            ], 422);
         }
 
         // ESC/POS Pulse command bytes (Pin 2 + Pin 5)

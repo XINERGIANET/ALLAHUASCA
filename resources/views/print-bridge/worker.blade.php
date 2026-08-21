@@ -41,6 +41,7 @@
     <script>
         (function () {
             const targetPrinter = @json($targetPrinter);
+            const allowedPrinterNames = @json($printerNames);
             const pullBase = @json(route('print-bridge.pull'));
             const ackBase = @json(route('print-bridge.ack'));
             const failBase = @json(route('print-bridge.fail'));
@@ -53,7 +54,8 @@
                 btnAll.addEventListener('click', function () {
                     try {
                         localStorage.setItem('xinergia_print_bridge_station', '1');
-                        localStorage.setItem('xinergia_print_bridge_printer', targetPrinter || '*');
+                        const validTarget = targetPrinter && allowedPrinterNames.some(name => String(name).trim().toLowerCase() === String(targetPrinter).trim().toLowerCase());
+                        localStorage.setItem('xinergia_print_bridge_printer', validTarget ? targetPrinter : '*');
                     } catch (e) {}
                     window.location.href = @json(url('/'));
                 });

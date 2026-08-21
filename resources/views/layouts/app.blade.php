@@ -14,10 +14,11 @@
         </script>
     @endauth
     @php
-        $qzDefaultPrinter = in_array(strtolower(request()->getHost()), ['localhost', '127.0.0.1', '::1']) ? 'BARRA' : 'BARRA2';
+        $qzDefaultPrinter = trim((string) config('qz.printer_name', ''));
         $qzCertPairTryOrder = config('qz.cert_pair_try_order', ['primary', 'secondary', 'tertiary']);
 
         $cashDrawerPrinterName = null;
+        $qzBranchPrinterNames = [];
         $branchId = session('branch_id');
         if ($branchId) {
             $printerId = \Illuminate\Support\Facades\DB::table('branch_parameters as bp')
@@ -31,6 +32,13 @@
             if ($printerId && is_numeric($printerId)) {
                 $cashDrawerPrinterName = \App\Models\PrinterBranch::where('id', $printerId)->value('name');
             }
+            $qzBranchPrinterNames = \App\Models\PrinterBranch::query()
+                ->where('branch_id', $branchId)
+                ->where('status', 'E')
+                ->orderBy('name')
+                ->pluck('name')
+                ->values()
+                ->all();
         }
         if ($cashDrawerPrinterName) {
             $qzDefaultPrinter = $cashDrawerPrinterName;
@@ -53,6 +61,7 @@
             productionLock: @json((bool) config('qz.production_lock', false)),
             allowedOrigins: @json(config('qz.allowed_origins', [])),
         };
+        window.__printBridgePrinterNames = @json($qzBranchPrinterNames);
     </script>
 
     <title>{{ $title ?? 'Dashboard' }} | Xinergia FOOD</title>

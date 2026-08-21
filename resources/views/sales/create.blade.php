@@ -1639,14 +1639,12 @@ es                        style="max-height: 80vh;">
             }
 
             function resolveStrictLocalPrinterName() {
-                try {
-                    const localPrinter = String(localStorage.getItem('xinergia_local_printer_name') ||
-                        localStorage.getItem('xinergia_print_bridge_printer') || '').trim();
-                    if (localPrinter) return localPrinter;
-                } catch (e) {}
-                const host = String(window.location.hostname || '').trim().toLowerCase();
-                const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(host);
-                return isLocalhost ? 'BARRA' : 'BARRA2';
+                const sel = document.getElementById('cobro-thermal-printer');
+                if (sel && sel.selectedOptions && sel.selectedOptions[0]) {
+                    const selectedName = String(sel.selectedOptions[0].textContent || '').split('—')[0].trim();
+                    if (selectedName) return selectedName;
+                }
+                return @json(optional(($thermalPrinters ?? collect())->first())->name);
             }
 
             function requiresStrictLocalQz(printerName) {
@@ -1672,8 +1670,8 @@ es                        style="max-height: 80vh;">
                 const strictLocalQz = requiresStrictLocalQz(preferredPrinterName);
                 const body = {
                     movement_id: movementId,
-                    printer_name: preferredPrinterName || null
                 };
+                if (preferredPrinterName) body.printer_name = preferredPrinterName;
                 if (printerId) body.printer_id = printerId;
 
                 // Prioridad 1: impresión RAW por la IP configurada en printers_branch.

@@ -1165,20 +1165,13 @@
                 }
 
                 function resolveStrictLocalPrinterName() {
-                    try {
-                        const localPrinter = String(localStorage.getItem('xinergia_local_printer_name') ||
-                            localStorage.getItem('xinergia_print_bridge_printer') || '').trim();
-                        if (localPrinter) return localPrinter;
-                    } catch (e) {}
                     const sel = document.getElementById('sales-index-thermal-printer');
                     if (sel && sel.value) {
                         const opt = sel.options[sel.selectedIndex];
                         const label = String(opt?.textContent || '').split('â€”')[0].trim();
                         if (label) return label;
                     }
-                    const host = String(window.location.hostname || '').trim().toLowerCase();
-                    const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(host);
-                    return isLocalhost ? 'BARRA' : 'BARRA2';
+                    return @json(optional(($thermalPrinters ?? collect())->first())->name);
                 }
 
                 function requiresStrictLocalQz(printerName) {
@@ -1221,8 +1214,8 @@
                     const strictLocalQz = requiresStrictLocalQz(preferredPrinterName);
                     const body = {
                         movement_id: movementId,
-                        printer_name: preferredPrinterName || null
                     };
+                    if (preferredPrinterName) body.printer_name = preferredPrinterName;
                     if (printerId) {
                         body.printer_id = printerId;
                     }

@@ -17,7 +17,7 @@ return [
 
     'certificate_path_tertiary' => env('QZ3_CERTIFICATE_PATH') ?: storage_path('app/qz3/digital-certificate.txt'),
 
-    'printer_name' => env('QZ_PRINTER_NAME', 'BARRA'),
+    'printer_name' => env('QZ_PRINTER_NAME', ''),
 
     // Algoritmo de firma que validará QZ (debe coincidir con qz.security.setSignatureAlgorithm()).
     // Valores: SHA1 | SHA256 | SHA384 | SHA512
@@ -47,12 +47,12 @@ return [
     // Útil si el nombre en BD no contiene "barra2". Separados por coma.
     'secondary_first_printer_names' => array_values(array_filter(array_map(
         'trim',
-        explode(',', (string) env('QZ_SECONDARY_FIRST_PRINTER_NAMES', 'BARRA2'))
+        explode(',', (string) env('QZ_SECONDARY_FIRST_PRINTER_NAMES', ''))
     ))),
 
     'tertiary_first_printer_names' => array_values(array_filter(array_map(
         'trim',
-        explode(',', (string) env('QZ_TERTIARY_FIRST_PRINTER_NAMES', 'BARRA3'))
+        explode(',', (string) env('QZ_TERTIARY_FIRST_PRINTER_NAMES', ''))
     ))),
 
     // Comanda: ticketera con IP → RAW por servidor (sin QZ en el navegador). El resto usa QZ como cobro.
