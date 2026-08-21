@@ -3708,7 +3708,6 @@ class SalesController extends Controller
         $lines[] = $sep;
         $lines[] = $this->thermalPadCenter('Representacion impresa del comprobante', $lineWidth);
         $lines[] = $this->thermalPadCenter('electronico.', $lineWidth);
-        $lines[] = $this->thermalPadCenter('Consulte en https://www.llamadevs.com.pe', $lineWidth);
         $lines[] = '';
         $lines[] = $this->thermalPadCenter('GRACIAS POR SU PREFERENCIA', $lineWidth);
 
