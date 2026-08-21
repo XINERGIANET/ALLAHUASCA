@@ -235,7 +235,23 @@
                 }
             }
 
-            setInterval(tick, 1500);
+            window.__xinergiaPrintBridgeTick = tick;
+            window.addEventListener('xinergia:print-bridge:wake', () => tick());
+            window.addEventListener('storage', (event) => {
+                if (event.key === 'xinergia_print_bridge_wake') {
+                    tick();
+                }
+            });
+            if ('BroadcastChannel' in window) {
+                const channel = new BroadcastChannel('xinergia-print-bridge');
+                channel.addEventListener('message', (event) => {
+                    if (event.data === 'wake') {
+                        tick();
+                    }
+                });
+                window.__xinergiaPrintBridgeChannel = channel;
+            }
+            setInterval(tick, 700);
             tick();
         })();
     </script>

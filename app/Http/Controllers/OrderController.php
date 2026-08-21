@@ -2826,19 +2826,20 @@ class OrderController extends Controller
             ->where('branch_id', $branchId)
             ->where('status', 'E');
 
-        $host = strtolower(trim($request->getHost() ?: ''));
-        $isLocalhost = in_array($host, ['localhost', '127.0.0.1', '::1']);
-        $defaultPrinterName = $isLocalhost ? 'barra' : 'barra2';
+        $requestedName = trim((string) ($validated['printer_name'] ?? ''));
+        if ($requestedName === '') {
+            return response()->json([
+                'success' => false,
+                'message' => 'La comanda no indica una impresora configurada para esta sucursal.',
+            ], 422);
+        }
 
-        $requestedName = trim((string) ($validated['printer_name'] ?? '')) ?: $defaultPrinterName;
-        $printer = $this->findPrinterBranchForBarTicket($printerBaseQuery, $requestedName, $defaultPrinterName);
+        $printer = $this->findPrinterBranchForBarTicket($printerBaseQuery, $requestedName);
         if (! $printer) {
-            $printer = new PrinterBranch([
-                'branch_id' => $branchId,
-                'name' => $requestedName ?: 'barra',
-                'status' => 'E',
-                'width' => 80,
-            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'La impresora "' . $requestedName . '" no esta activa para esta sucursal.',
+            ], 422);
         }
 
         $payload = $this->buildKitchenEscPosPayload((string) $validated['ticket_text']);
@@ -2986,20 +2987,21 @@ class OrderController extends Controller
             ->where('branch_id', $branchId)
             ->where('status', 'E');
 
-        $host = strtolower(trim($request->getHost() ?: ''));
-        $isLocalhost = in_array($host, ['localhost', '127.0.0.1', '::1']);
-        $defaultPrinterName = $isLocalhost ? 'barra' : 'barra2';
+        $requestedName = trim((string) ($validated['printer_name'] ?? ''));
+        if ($requestedName === '') {
+            return response()->json([
+                'success' => false,
+                'message' => 'La comanda no indica una impresora configurada para esta sucursal.',
+            ], 422);
+        }
 
-        $requestedName = trim((string) ($validated['printer_name'] ?? '')) ?: $defaultPrinterName;
-        $printer = $this->findPrinterBranchForBarTicket($printerBaseQuery, $requestedName, $defaultPrinterName);
+        $printer = $this->findPrinterBranchForBarTicket($printerBaseQuery, $requestedName);
 
         if (! $printer) {
-            $printer = new PrinterBranch([
-                'branch_id' => $branchId,
-                'name' => $requestedName ?: 'barra',
-                'status' => 'E',
-                'width' => 80,
-            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'La impresora "' . $requestedName . '" no esta activa para esta sucursal.',
+            ], 422);
         }
 
         $payload = $this->buildKitchenEscPosPayload((string) $validated['ticket_text']);
@@ -3213,44 +3215,18 @@ class OrderController extends Controller
      * cuando un LIKE "barra%" o el orden de filas en BD entregaba la impresora incorrecta
      * (móvil en la LAN enviando comanda a una ticketera por USB vía IP en otra PC).
      */
-    private function findPrinterBranchForBarTicket($printerBaseQuery, string $requestedName, string $defaultPrinterName): ?PrinterBranch
+    private function findPrinterBranchForBarTicket($printerBaseQuery, string $requestedName): ?PrinterBranch
     {
-        $n = trim($requestedName) !== '' ? trim($requestedName) : trim($defaultPrinterName);
+        $n = trim($requestedName);
         if ($n === '') {
-            $n = $defaultPrinterName;
+            return null;
         }
-        $ln = mb_strtolower($n);
+
         $printer = (clone $printerBaseQuery)
             ->whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower($n)])
             ->first();
-        if ($printer) {
-            return $printer;
-        }
-        if ($ln !== '') {
-            $printer = (clone $printerBaseQuery)
-                ->whereRaw('LOWER(TRIM(name)) LIKE ?', [$ln . '%'])
-                ->orderByRaw('LENGTH(TRIM(name)) ASC')
-                ->orderBy('id')
-                ->first();
-            if ($printer) {
-                return $printer;
-            }
-        }
-        $def = trim($defaultPrinterName);
-        if ($def !== '') {
-            $printer = (clone $printerBaseQuery)
-                ->whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower($def)])
-                ->first();
-            if ($printer) {
-                return $printer;
-            }
-        }
 
-        return (clone $printerBaseQuery)
-            ->whereRaw('LOWER(TRIM(name)) LIKE ?', ['barra%'])
-            ->orderByRaw('LENGTH(TRIM(name)) DESC')
-            ->orderBy('id')
-            ->first();
+        return $printer ?: null;
     }
 
     /**

@@ -118,6 +118,22 @@ export function startPrintBridgeStationPoll() {
         }
     };
 
-    window.__xinergiaPrintBridgeInterval = setInterval(tick, 1600);
+    window.__xinergiaPrintBridgeTick = tick;
+    window.addEventListener('xinergia:print-bridge:wake', () => tick());
+    window.addEventListener('storage', (event) => {
+        if (event.key === 'xinergia_print_bridge_wake') {
+            tick();
+        }
+    });
+    if ('BroadcastChannel' in window) {
+        const channel = new BroadcastChannel('xinergia-print-bridge');
+        channel.addEventListener('message', (event) => {
+            if (event.data === 'wake') {
+                tick();
+            }
+        });
+        window.__xinergiaPrintBridgeChannel = channel;
+    }
+    window.__xinergiaPrintBridgeInterval = setInterval(tick, 700);
     tick();
 }

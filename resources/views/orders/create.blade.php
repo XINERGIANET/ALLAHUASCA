@@ -2281,6 +2281,27 @@
                         }
                     }
 
+                    function wakePrintBridgeNow() {
+                        try {
+                            window.dispatchEvent(new CustomEvent('xinergia:print-bridge:wake'));
+                        } catch (e) {}
+                        try {
+                            localStorage.setItem('xinergia_print_bridge_wake', String(Date.now()));
+                        } catch (e) {}
+                        try {
+                            if ('BroadcastChannel' in window) {
+                                const channel = new BroadcastChannel('xinergia-print-bridge');
+                                channel.postMessage('wake');
+                                channel.close();
+                            }
+                        } catch (e) {}
+                        try {
+                            if (typeof window.__xinergiaPrintBridgeTick === 'function') {
+                                window.__xinergiaPrintBridgeTick();
+                            }
+                        } catch (e) {}
+                    }
+
                     async function printTicketWithQz(qzApi, printerName, plainText) {
                         const paperWidth = resolvePrinterWidthByName(printerName);
                         const paperMm = paperWidth === 80 ? 80 : 58;
@@ -3318,6 +3339,9 @@
                             const td = tr.headers.get('content-type')?.includes('application/json') ? await tr.json() :
                                 null;
                             if (tr.ok && td?.success) {
+                                if (td.print_bridge) {
+                                    wakePrintBridgeNow();
+                                }
                                 if (td.payload_b64) {
                                     const qzApi = window.qz;
                                     const targetPrinter = printerName || td.printer_name;
@@ -5459,6 +5483,7 @@
                                         if (hasKitchenOutput) {
                                             kitchenPrintedOk = await printKitchenTickets(kitchenDeltaItems,
                                                 currentTable);
+                                            wakePrintBridgeNow();
                                         }
                                     } catch (pzErr) {
                                         console.error('QZ Tray:', pzErr);
