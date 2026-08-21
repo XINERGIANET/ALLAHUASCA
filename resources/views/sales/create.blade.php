@@ -1812,7 +1812,7 @@ es                        style="max-height: 80vh;">
                         showCobroNotification('Impresión', td.message || 'Ticket enviado a la ticketera.',
                             'success');
                     } else {
-                        openSaleTicketPdfTab(movementId);
+                        showCobroNotification('ImpresiÃ³n', td?.message || 'No se pudo generar el ticket.', 'error');
                     }
                 } catch (e) {
                     console.warn('Ticketera red:', e);

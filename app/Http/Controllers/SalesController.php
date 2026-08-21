@@ -3487,6 +3487,8 @@ class SalesController extends Controller
         $branch = $printData['branchForLogo'];
         $paymentLabel = $printData['paymentLabel'];
         $ticketAddressDisplay = (string) ($printData['ticketAddressDisplay'] ?? '');
+        $totalInWords = (string) ($printData['totalInWords'] ?? '');
+        $ticketFooterMeta = (array) ($printData['ticketFooterMeta'] ?? []);
 
         $printerWidthMm = (int) ($printer?->width ?? 80);
         $lineWidth = $printerWidthMm >= 80 ? 48 : 32;
