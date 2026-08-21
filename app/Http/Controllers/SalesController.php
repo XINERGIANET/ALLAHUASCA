@@ -2034,10 +2034,9 @@ class SalesController extends Controller
         Cache::forget($dedupeKey);
 
         $ticketText = $validated['ticket_text'] ?? null;
-        $plain = $ticketText !== null
-            ? (string) $ticketText
-            : $this->buildThermalTicketPlainTextApproved($movement, $request, $printer);
-        $payload = $this->wrapEscPosPlainPayload($plain);
+        $payload = $ticketText !== null
+            ? $this->wrapEscPosPlainPayload((string) $ticketText)
+            : $this->buildEscPosSaleTicketPayload($movement, $request, $printer);
 
         if (! $qzMode && $isRemoteRequest && $printer) {
             $job = app(PrintBridgeQueue::class)->push(
@@ -3405,6 +3404,8 @@ class SalesController extends Controller
         $branch = $printData['branchForLogo'];
         $paymentLabel = $printData['paymentLabel'];
         $ticketAddressDisplay = (string) ($printData['ticketAddressDisplay'] ?? '');
+        $totalInWords = (string) ($printData['totalInWords'] ?? '');
+        $ticketFooterMeta = (array) ($printData['ticketFooterMeta'] ?? []);
 
         // Ancho dinámico según impresora configurada (80mm → 48 chars, 58mm → 32 chars)
         $printerWidthMm = (int) ($printer?->width ?? 80);
@@ -3536,11 +3537,22 @@ class SalesController extends Controller
         $docSubtotal = (float) ($sale->salesMovement?->subtotal ?? $sale->orderMovement?->subtotal ?? 0);
         $docTax = (float) ($sale->salesMovement?->tax ?? $sale->orderMovement?->tax ?? 0);
         $docTotal = (float) ($sale->salesMovement?->total ?? $sale->orderMovement?->total ?? 0);
-        $docCode = strtoupper(substr($sale->documentType?->name ?? 'T', 0, 1)).$this->ticketSeriesForMovement($sale).'-'.$sale->number;
+        $docName = Str::ascii($sale->documentType?->name ?? 'Ticket');
+        $docCode = trim((string) ($sale->electronic_invoice_number ?? ''));
+        if ($docCode === '') {
+            $docCode = strtoupper(substr($sale->documentType?->name ?? 'T', 0, 1)).$this->ticketSeriesForMovement($sale).'-'.$sale->number.'-'.($sale->moved_at?->format('Y') ?? now()->format('Y'));
+        }
+        $customerName = trim((string) ($sale->person_name ?? ''));
+        if ($customerName === '' || mb_strtolower($customerName, 'UTF-8') === 'sin cliente') {
+            $customerName = 'CLIENTE VARIOS';
+        }
+        $customerDocument = trim((string) ($sale->person?->document_number ?? ''));
+        if ($customerDocument === '' || $customerDocument === '-') {
+            $customerDocument = '0';
+        }
 
         $lines = [];
         $lines[] = $this->thermalPadCenter(strtoupper(Str::ascii($branch->legal_name ?? 'SUCURSAL')), $lineWidth);
-        $lines[] = $this->thermalPadCenter('RUC: '.Str::ascii($branch->ruc ?? '-'), $lineWidth);
         $branchAddrPlainAppr = trim((string) ($branch->address ?? ''));
         if ($branchAddrPlainAppr !== '') {
             $addrAsciiAppr = Str::ascii($branchAddrPlainAppr);
@@ -3551,21 +3563,24 @@ class SalesController extends Controller
                 }
             }
         }
-        $lines[] = $this->thermalPadCenter(strtoupper(Str::ascii($sale->documentType?->name ?? 'TICKET')), $lineWidth);
-        $lines[] = $this->thermalPadCenter(Str::ascii($docCode), $lineWidth);
+        $lines[] = $this->thermalPadCenter('RUC: '.Str::ascii($branch->ruc ?? '-'), $lineWidth);
         $lines[] = $sep;
+        $lines[] = Str::ascii($docName).': '.Str::ascii($docCode);
         $lines[] = 'Fecha: '.optional($sale->moved_at)->format('d/m/Y H:i');
-        $lines[] = 'Cliente: '.Str::ascii($sale->person_name ?? 'CLIENTES VARIOS');
-        $lines[] = 'Dir. cliente: '.Str::ascii($ticketAddressDisplay);
-        $lines[] = 'RUC/DNI: '.Str::ascii($sale->person?->document_number ?? '-');
-        $lines[] = 'Forma pago: '.Str::ascii($paymentLabel);
+        $lines[] = 'Cliente: '.Str::ascii($customerName);
+        $lines[] = 'Dir.: '.Str::ascii($ticketAddressDisplay !== '' ? $ticketAddressDisplay : '-');
+        $lines[] = 'RUC/DNI: '.Str::ascii($customerDocument);
+        $lines[] = 'Forma de pago: '.Str::ascii($paymentLabel);
+        if ($sale->comment) {
+            $lines[] = 'Notas: '.Str::ascii(Str::limit((string) $sale->comment, 120));
+        }
         if ($this->saleMovementIsCredit($sale)) {
             $lines[] = Str::ascii('Venta a credito: saldo pendiente de cobro.');
         }
         $lines[] = $sep;
         $lines[] = $this->thermalPadEnd('Cant.', $colQty)
             .str_repeat(' ', $colGap)
-            .$this->thermalPadEnd('Descr.', $colName)
+            .$this->thermalPadEnd('Desc.', $colName)
             .($showUnitColumn ? $this->thermalPadEnd($printerWidthMm >= 80 ? 'Unidad(es)' : 'Und.', $colMeasure) : '')
             .$this->thermalPadStart('P.Unit.', $colPrice)
             .$this->thermalPadStart('Subt.', $colAmount);
@@ -3651,24 +3666,49 @@ class SalesController extends Controller
         }
 
         $lines[] = $sep;
+        $moneyCol = $lineWidth - 16;
         if ($thermalHasDiscounts) {
-            $lines[] = $this->thermalPadEnd('Descuento', $lineWidth - 12)
-                .$this->thermalPadStart('-'.number_format($thermalTotalDiscount, 2, '.', ''), 12);
+            $lines[] = $this->thermalPadEnd('Descuento:', $moneyCol)
+                .$this->thermalPadStart('- S/ '.number_format($thermalTotalDiscount, 2, '.', ''), 16);
         }
-        $lines[] = $this->thermalPadEnd('Subtotal', $lineWidth - 12)
-            .$this->thermalPadStart(number_format($docSubtotal, 2, '.', ''), 12);
-        $lines[] = $this->thermalPadEnd('IGV', $lineWidth - 12)
-            .$this->thermalPadStart(number_format($docTax, 2, '.', ''), 12);
-        $lines[] = $this->thermalPadEnd('TOTAL', $lineWidth - 12)
-            .$this->thermalPadStart(number_format($docTotal, 2, '.', ''), 12);
-
-        if ($sale->comment) {
-            $lines[] = 'Notas: '.Str::ascii(Str::limit((string) $sale->comment, 120));
+        $lines[] = $this->thermalPadEnd('Op. gravada:', $moneyCol)
+            .$this->thermalPadStart('S/ '.number_format($docSubtotal, 2, '.', ''), 16);
+        $lines[] = $this->thermalPadEnd('I.G.V.:', $moneyCol)
+            .$this->thermalPadStart('S/ '.number_format($docTax, 2, '.', ''), 16);
+        $lines[] = $this->thermalPadEnd('Op. exonerada:', $moneyCol)
+            .$this->thermalPadStart('S/ 0.00', 16);
+        $lines[] = $this->thermalPadEnd('Op. inafecta:', $moneyCol)
+            .$this->thermalPadStart('S/ 0.00', 16);
+        $lines[] = $this->thermalPadEnd('Importe total:', $moneyCol)
+            .$this->thermalPadStart('S/ '.number_format($docTotal, 2, '.', ''), 16);
+        if ($totalInWords !== '') {
+            foreach ($wrapText('SON: '.mb_strtoupper($totalInWords, 'UTF-8'), $lineWidth) as $wordLine) {
+                $lines[] = $wordLine;
+            }
         }
 
+        $lines[] = $sep;
+        $lines[] = '__XINERGIA_ESC_POS_QR__';
+        $lines[] = $sep;
+
+        if (! empty($ticketFooterMeta)) {
+            $lines[] = $this->thermalPadCenter('Pedido: '.Str::ascii((string) ($ticketFooterMeta['order_number'] ?? '-')), $lineWidth);
+            $lines[] = $this->thermalPadCenter('Mesa: '.Str::ascii((string) ($ticketFooterMeta['location'] ?? '-')), $lineWidth);
+            $lines[] = $this->thermalPadCenter('Responsable: '.Str::ascii((string) ($ticketFooterMeta['responsible'] ?? '-')), $lineWidth);
+            $lines[] = $this->thermalPadCenter('Caja: '.Str::ascii((string) ($ticketFooterMeta['cash_register'] ?? '-')), $lineWidth);
+            $firstPaymentLine = $paymentLabel;
+            $lines[] = $this->thermalPadEnd('Medio de pago:', intdiv($lineWidth, 2))
+                .$this->thermalPadStart(Str::ascii((string) $firstPaymentLine), $lineWidth - intdiv($lineWidth, 2));
+            $lines[] = $this->thermalPadEnd('Hora:', intdiv($lineWidth, 2))
+                .$this->thermalPadStart(Str::ascii((string) ($ticketFooterMeta['time'] ?? now()->format('H:i:s'))), $lineWidth - intdiv($lineWidth, 2));
+        }
+
+        $lines[] = $sep;
+        $lines[] = $this->thermalPadCenter('Representacion impresa del comprobante', $lineWidth);
+        $lines[] = $this->thermalPadCenter('electronico.', $lineWidth);
+        $lines[] = $this->thermalPadCenter('Consulte en https://www.llamadevs.com.pe', $lineWidth);
         $lines[] = '';
-        $lines[] = 'Impreso: '.now()->format('d/m/Y H:i:s');
-        $lines[] = $this->thermalPadCenter('Gracias por su preferencia', $lineWidth);
+        $lines[] = $this->thermalPadCenter('GRACIAS POR SU PREFERENCIA', $lineWidth);
 
         return implode("\n", $lines);
     }
@@ -3910,6 +3950,140 @@ class SalesController extends Controller
         });
 
         return response()->json(['success' => true, 'message' => 'Reorganización sin huecos realizada con éxito: ' . implode(' | ', $summary)]);
+    }
+
+    private function buildEscPosSaleTicketPayload(Movement $sale, Request $request, ?PrinterBranch $printer = null): string
+    {
+        $printData = $this->buildSalePrintData($sale, $request);
+        $text = $this->buildThermalTicketPlainTextApproved($sale, $request, $printer);
+        $text = str_replace(["\r\n", "\r"], "\n", $text);
+
+        $printerWidthMm = (int) ($printer?->width ?? 80);
+        $maxLogoWidth = $printerWidthMm >= 80 ? 384 : 280;
+        $payload = "\x1B\x40";
+
+        $logoBinary = $this->resolveEscPosLogoBinary($printData);
+        if ($logoBinary !== null) {
+            $logoPayload = $this->buildEscPosRasterImagePayload($logoBinary, $maxLogoWidth);
+            if ($logoPayload !== null) {
+                $payload .= "\x1B\x61\x01".$logoPayload."\n";
+            }
+        }
+
+        $qrPayload = (string) ($printData['qrPayload'] ?? '');
+        $qrMarker = '__XINERGIA_ESC_POS_QR__';
+        if ($qrPayload !== '' && str_contains($text, $qrMarker)) {
+            [$beforeQr, $afterQr] = explode($qrMarker, $text, 2);
+            $payload .= "\x1B\x61\x00".$beforeQr."\n";
+            $payload .= $this->buildEscPosQrPayload($qrPayload, $printerWidthMm >= 80 ? 7 : 5)."\n";
+            $payload .= "\x1B\x61\x00".$afterQr."\n";
+        } else {
+            $payload .= "\x1B\x61\x00".str_replace($qrMarker, '', $text)."\n";
+            if ($qrPayload !== '') {
+                $payload .= "\n".$this->buildEscPosQrPayload($qrPayload, $printerWidthMm >= 80 ? 7 : 5)."\n";
+            }
+        }
+
+        return $payload."\n\n\x1D\x56\x00";
+    }
+
+    private function resolveEscPosLogoBinary(array $printData): ?string
+    {
+        $embedded = (string) ($printData['logoEmbeddedUrl'] ?? '');
+        if ($embedded !== '' && preg_match('#^data:image/[^;]+;base64,(.+)$#', $embedded, $m)) {
+            $decoded = base64_decode($m[1], true);
+            return is_string($decoded) && $decoded !== '' ? $decoded : null;
+        }
+
+        $fileUrl = (string) ($printData['logoFileUrl'] ?? '');
+        if ($fileUrl !== '' && str_starts_with($fileUrl, 'file:///')) {
+            $path = urldecode(substr($fileUrl, 8));
+            if (PHP_OS_FAMILY === 'Windows' && preg_match('#^/[A-Za-z]:/#', $path)) {
+                $path = substr($path, 1);
+            }
+            if (is_file($path)) {
+                $contents = @file_get_contents($path);
+                return is_string($contents) && $contents !== '' ? $contents : null;
+            }
+        }
+
+        return null;
+    }
+
+    private function buildEscPosRasterImagePayload(string $imageBinary, int $maxWidthPx): ?string
+    {
+        if (! function_exists('imagecreatefromstring')) {
+            return null;
+        }
+
+        $src = @imagecreatefromstring($imageBinary);
+        if (! $src) {
+            return null;
+        }
+
+        $srcW = imagesx($src);
+        $srcH = imagesy($src);
+        if ($srcW <= 0 || $srcH <= 0) {
+            imagedestroy($src);
+            return null;
+        }
+
+        $targetW = min($maxWidthPx, $srcW);
+        $targetW = max(8, (int) floor($targetW / 8) * 8);
+        $targetH = max(1, (int) round($srcH * ($targetW / $srcW)));
+        $targetH = min(240, $targetH);
+
+        $img = imagecreatetruecolor($targetW, $targetH);
+        $white = imagecolorallocate($img, 255, 255, 255);
+        imagefill($img, 0, 0, $white);
+        imagecopyresampled($img, $src, 0, 0, 0, 0, $targetW, $targetH, $srcW, $srcH);
+        imagedestroy($src);
+
+        $bytesPerRow = intdiv($targetW + 7, 8);
+        $data = '';
+        for ($y = 0; $y < $targetH; $y++) {
+            for ($xByte = 0; $xByte < $bytesPerRow; $xByte++) {
+                $byte = 0;
+                for ($bit = 0; $bit < 8; $bit++) {
+                    $x = ($xByte * 8) + $bit;
+                    if ($x >= $targetW) {
+                        continue;
+                    }
+                    $rgb = imagecolorat($img, $x, $y);
+                    $r = ($rgb >> 16) & 0xFF;
+                    $g = ($rgb >> 8) & 0xFF;
+                    $b = $rgb & 0xFF;
+                    $luma = (0.299 * $r) + (0.587 * $g) + (0.114 * $b);
+                    if ($luma < 160) {
+                        $byte |= (0x80 >> $bit);
+                    }
+                }
+                $data .= chr($byte);
+            }
+        }
+        imagedestroy($img);
+
+        return "\x1D\x76\x30\x00"
+            .chr($bytesPerRow & 0xFF)
+            .chr(($bytesPerRow >> 8) & 0xFF)
+            .chr($targetH & 0xFF)
+            .chr(($targetH >> 8) & 0xFF)
+            .$data;
+    }
+
+    private function buildEscPosQrPayload(string $data, int $size = 6): string
+    {
+        $data = Str::ascii($data);
+        $size = max(3, min(10, $size));
+        $storeLength = strlen($data) + 3;
+
+        return "\x1B\x61\x01"
+            ."\x1D\x28\x6B\x04\x00\x31\x41\x32\x00"
+            ."\x1D\x28\x6B\x03\x00\x31\x43".chr($size)
+            ."\x1D\x28\x6B\x03\x00\x31\x45\x31"
+            ."\x1D\x28\x6B".chr($storeLength & 0xFF).chr(($storeLength >> 8) & 0xFF)."\x31\x50\x30".$data
+            ."\x1D\x28\x6B\x03\x00\x31\x51\x30"
+            ."\x1B\x61\x00";
     }
 
     private function wrapEscPosPlainPayload(string $text): string
