@@ -4,9 +4,9 @@ return [
 
     /*
      * Cola persistente en base de datos para comandas hacia otra PC.
-     * Los nombres de impresora que usan el puente son los mismos que QZ_SECONDARY_FIRST_PRINTER_NAMES (qz.php).
+     * Una reserva evita dobles impresiones simultáneas, pero el trabajo permanece Pendiente hasta el ack.
      */
 
-    'claim_timeout_seconds' => 90,
+    'claim_timeout_seconds' => env('PRINT_BRIDGE_CLAIM_TIMEOUT_SECONDS', 3),
 
 ];

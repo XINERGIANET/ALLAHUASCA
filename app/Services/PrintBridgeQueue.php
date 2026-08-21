@@ -57,10 +57,12 @@ class PrintBridgeQueue
         ]);
     }
 
-    /** Reserva un trabajo. Una reserva abandonada vuelve a estar disponible luego de 90 segundos. */
+    /** Reserva un trabajo sin sacarlo de Pendiente. */
     public function peek(int $branchId, ?string $printerName = null): ?array
     {
         return DB::transaction(function () use ($branchId, $printerName) {
+            $claimTimeout = max(1, (int) config('print_bridge.claim_timeout_seconds', 3));
+
             $job = PrintJob::query()
                 ->where('branch_id', $branchId)
                 ->whereExists(function ($exists) {
@@ -74,12 +76,16 @@ class PrintBridgeQueue
                     'LOWER(TRIM(printer_name)) = ?',
                     [mb_strtolower(trim((string) $printerName))]
                 ))
-                ->where(function ($query) {
+                ->where(function ($query) use ($claimTimeout) {
                     $query->where('status', 'pending')
-                        ->orWhere(function ($stale) {
+                        ->orWhere(function ($stale) use ($claimTimeout) {
                             $stale->where('status', 'processing')
-                                ->where('claimed_at', '<=', now()->subSeconds((int) config('print_bridge.claim_timeout_seconds', 90)));
+                                ->where('claimed_at', '<=', now()->subSeconds($claimTimeout));
                         });
+                })
+                ->where(function ($query) use ($claimTimeout) {
+                    $query->whereNull('claimed_at')
+                        ->orWhere('claimed_at', '<=', now()->subSeconds($claimTimeout));
                 })
                 ->orderBy('created_at')
                 ->lockForUpdate()
@@ -90,7 +96,6 @@ class PrintBridgeQueue
             }
 
             $job->update([
-                'status' => 'processing',
                 'claimed_at' => now(),
                 'attempts' => $job->attempts + 1,
                 'last_error' => null,
@@ -128,7 +133,7 @@ class PrintBridgeQueue
             ->where('branch_id', $branchId)
             ->where('uuid', $jobUuid)
             ->whereRaw('LOWER(TRIM(printer_name)) = ?', [mb_strtolower(trim($printerName))])
-            ->where('status', 'processing')
+            ->whereIn('status', ['pending', 'processing'])
             ->update([
                 'status' => 'failed',
                 'last_error' => Str::limit(trim($error), 1000, ''),
