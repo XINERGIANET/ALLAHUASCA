@@ -13,6 +13,21 @@ use Illuminate\Support\Str;
 
 class ApisunatService
 {
+    /**
+     * Normaliza un número local de venta a su correlativo real para SUNAT/Apisunat (máx. 8 dígitos),
+     * quitando el "1" inicial heredado que algunos números locales arrastran (ej. "100000381" -> "00000381").
+     * Mismo criterio que SalesController/OrderController usan para esta misma compatibilidad.
+     */
+    private function normalizeLocalCorrelativo(?string $number): int
+    {
+        $raw = preg_replace('/\D+/', '', (string) $number);
+        if (strlen($raw) > 8 && str_starts_with($raw, '100')) {
+            $raw = substr($raw, 1);
+        }
+
+        return (int) $raw;
+    }
+
     public function isEligibleDocument(Movement $sale): bool
     {
         $docName = mb_strtolower(trim((string) ($sale->documentType?->name ?? '')), 'UTF-8');
@@ -127,20 +142,18 @@ class ApisunatService
         // Compatibilidad: algunos números locales llevan un "1" inicial heredado (ej. "100000381"
         // en vez de "00000381"). SUNAT/Apisunat exige correlativos de máximo 8 dígitos, así que
         // hay que quitar ese prefijo antes de usarlo (mismo criterio que generateSaleNumberForSplit).
-        $rawLocalNumber = preg_replace('/\D+/', '', (string) $sale->number);
-        if (strlen($rawLocalNumber) > 8 && str_starts_with($rawLocalNumber, '100')) {
-            $rawLocalNumber = substr($rawLocalNumber, 1);
-        }
-        $localNum = (int) $rawLocalNumber;
+        $localNum = $this->normalizeLocalCorrelativo($sale->number);
 
         // 2. Obtener todos los correlativos locales ya emitidos electrónicamente
+        // (misma normalización que $localNum: si no, un número histórico con el "1" heredado
+        // quedaría registrado en $usedSet con 9 dígitos y nunca haría match contra $localNum ya limpio).
         $usedNumbers = Movement::query()
             ->where('branch_id', $sale->branch_id)
             ->where('document_type_id', $sale->document_type_id)
             ->where('movement_type_id', 2)
             ->whereNotNull('electronic_invoice_external_id')
             ->pluck('number')
-            ->map(fn ($n) => (int) preg_replace('/\D+/', '', (string) $n))
+            ->map(fn ($n) => $this->normalizeLocalCorrelativo($n))
             ->filter(fn ($n) => $n > 0)
             ->toArray();
 
