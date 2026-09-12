@@ -1230,9 +1230,11 @@ class OrderController extends Controller
             }
         }
 
-        // 2. Validar si la mesa está siendo tomada en borrador por OTRO mozo (solo si latido activo < 7 segundos)
+        // 2. Validar si la mesa está siendo tomada en borrador por OTRO mozo (solo si latido activo < 7 segundos).
+        // Solo aplica a perfiles Mozo: un cajero/admin debe poder abrir/cobrar la mesa aunque el
+        // mozo dueño la tenga abierta en su propio dispositivo (su heartbeat no debe bloquearlo).
         $draftLock = \Illuminate\Support\Facades\Cache::get("table_draft_lock:{$table->id}");
-        if (is_array($draftLock) && ! empty($draftLock['locked_at']) && (time() - (int)$draftLock['locked_at']) < 7) {
+        if ($isMozo && is_array($draftLock) && ! empty($draftLock['locked_at']) && (time() - (int)$draftLock['locked_at']) < 7) {
             $lockUser = (int) ($draftLock['user_id'] ?? 0);
             $lockPerson = (int) ($draftLock['person_id'] ?? 0);
             $lockUserName = trim((string) ($draftLock['user_name'] ?? ''));
