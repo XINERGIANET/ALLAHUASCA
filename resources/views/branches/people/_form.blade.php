@@ -101,16 +101,17 @@
         onProvinceChange() {
             this.districtId = '';
         },
+        getDocumentMaxLength() {
+            const type = String(this.personType).toUpperCase();
+            if (type === 'RUC') return 11;
+            if (type === 'CARNET DE EXTRANGERIA' || type === 'PASAPORTE') return 12;
+            return 8;
+        },
         onPersonTypeChange() {
             this.documentError = '';
-            if (String(this.personType).toUpperCase() === 'RUC') {
-                if (this.documentNumber.length > 11) {
-                    this.documentNumber = this.documentNumber.slice(0, 11);
-                }
-                return;
-            }
-            if (this.documentNumber.length > 8) {
-                this.documentNumber = this.documentNumber.slice(0, 8);
+            const maxLength = this.getDocumentMaxLength();
+            if (this.documentNumber.length > maxLength) {
+                this.documentNumber = this.documentNumber.slice(0, maxLength);
             }
         },
         normalizeText(value) {
@@ -162,8 +163,15 @@
             this.districtId = district ? String(district.id) : '';
         },
         async searchDocument() {
+            const type = String(this.personType).toUpperCase();
             const document = this.documentNumber.trim();
-            const isRuc = String(this.personType).toUpperCase() === 'RUC';
+
+            if (type !== 'RUC' && type !== 'DNI') {
+                this.documentError = 'La busqueda automatica solo esta disponible para DNI y RUC. Complete los datos manualmente.';
+                return;
+            }
+
+            const isRuc = type === 'RUC';
             const expectedLength = isRuc ? 11 : 8;
 
             if (document.length !== expectedLength) {
@@ -324,7 +332,7 @@
                 name="document_number"
                 x-model.trim="documentNumber"
                 @keydown.enter.prevent="searchDocument()"
-                :maxlength="String(personType).toUpperCase() === 'RUC' ? 11 : 8"
+                :maxlength="getDocumentMaxLength()"
                 @unless($hidePinAndRoles) required @endunless
                 placeholder="Ingrese el documento"
                 class="dark:bg-dark-900 shadow-theme-xs focus:border-[#111827] focus:ring-[#111827]/10 dark:focus:border-[#111827] h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"

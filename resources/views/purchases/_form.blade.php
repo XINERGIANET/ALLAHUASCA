@@ -218,7 +218,7 @@
                                         </select>
                                         <input type="text" x-model.trim="providerForm.document_number"
                                             @keydown.enter.prevent="searchSupplierApi()"
-                                            :maxlength="providerForm.person_type === 'RUC' ? 11 : 8"
+                                            :maxlength="getSupplierDocumentMaxLength()"
                                             placeholder="Ej: 20123456789"
                                             class="{{ $iC }} flex-1" />
                                         <button type="button" @click="searchSupplierApi()" :disabled="supplierSearchLoading"
@@ -827,21 +827,34 @@
                         get supplierDistricts() {
                             return this.allDistricts.filter(d => String(d.parent_location_id) === String(this.supplierProvId));
                         },
+                        getSupplierDocumentMaxLength() {
+                            const type = this.providerForm.person_type;
+                            if (type === 'RUC') return 11;
+                            if (type === 'CARNET DE EXTRANGERIA' || type === 'PASAPORTE') return 12;
+                            return 8;
+                        },
                         onSupplierTypeChange() {
                             this.supplierApiError = '';
                             if (this.providerForm.person_type === 'RUC') {
                                 this.providerForm.last_name = '';
                                 this.providerForm.genero = '';
                                 this.providerForm.fecha_nacimiento = '';
-                                if (this.providerForm.document_number.length > 11)
-                                    this.providerForm.document_number = this.providerForm.document_number.slice(0, 11);
-                            } else if (this.providerForm.document_number.length > 8) {
-                                this.providerForm.document_number = this.providerForm.document_number.slice(0, 8);
+                            }
+                            const maxLength = this.getSupplierDocumentMaxLength();
+                            if (this.providerForm.document_number.length > maxLength) {
+                                this.providerForm.document_number = this.providerForm.document_number.slice(0, maxLength);
                             }
                         },
                         async searchSupplierApi() {
+                            const type = this.providerForm.person_type;
                             const doc = this.providerForm.document_number.trim();
-                            const isRuc = this.providerForm.person_type === 'RUC';
+
+                            if (type !== 'RUC' && type !== 'DNI') {
+                                this.supplierApiError = 'La busqueda automatica solo esta disponible para DNI y RUC. Complete los datos manualmente.';
+                                return;
+                            }
+
+                            const isRuc = type === 'RUC';
                             const expected = isRuc ? 11 : 8;
                             if (doc.length !== expected) {
                                 this.supplierApiError = isRuc ? 'Ingrese un RUC de 11 dígitos.' : 'Ingrese un DNI de 8 dígitos.';
