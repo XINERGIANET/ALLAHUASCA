@@ -242,8 +242,9 @@ class OrderPaymentSplitService
         $fromRel = $detail->relationLoaded('taxRate') && $detail->taxRate
             ? (float) $detail->taxRate->tax_rate
             : null;
-        $pct = (float) data_get($detail->tax_rate_snapshot, 'tax_rate', $fromRel ?? 10);
+        $snapshotPct = data_get($detail->tax_rate_snapshot, 'tax_rate');
+        $pct = $snapshotPct !== null ? (float) $snapshotPct : ($fromRel ?? 18.0);
 
-        return $pct > 0 ? ($pct / 100) : 0.10;
+        return $pct / 100;
     }
 }

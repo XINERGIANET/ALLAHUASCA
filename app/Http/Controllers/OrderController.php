@@ -373,6 +373,10 @@ class OrderController extends Controller
                     : ($d->created_at ? $d->created_at->format('H:i') : null);
                 $status = $d->status ?? 'A';
                 $takeawayQtyFull = max(0, min((float) ($d->takeaway_quantity ?? 0), $qty));
+                $snapshotTaxRate = data_get($d->tax_rate_snapshot, 'tax_rate');
+                $taxRate = $snapshotTaxRate !== null
+                    ? (float) $snapshotTaxRate
+                    : (float) ($d->taxRate->tax_rate ?? 18);
 
                 if ($alreadyBilled <= 0.000001) {
                     return [
@@ -380,7 +384,7 @@ class OrderController extends Controller
                         'name' => $d->description ?? '',
                         'qty' => $qty,
                         'price' => round($price, 6),
-                        'tax_rate' => 10,
+                        'tax_rate' => $taxRate,
                         'priceManual' => true,
                         'note' => $note,
                         'commandTime' => $commandTime,
@@ -405,7 +409,7 @@ class OrderController extends Controller
                     'name' => $d->description ?? '',
                     'qty' => $qtyOut,
                     'price' => round($priceOut, 6),
-                    'tax_rate' => 10,
+                    'tax_rate' => $taxRate,
                     'priceManual' => true,
                     'note' => $note,
                     'commandTime' => $commandTime,
@@ -1417,7 +1421,7 @@ class OrderController extends Controller
                 'name' => $first['name'],
                 'qty' => $sumQty,
                 'price' => $mergedPrice,
-                'tax_rate' => $first['tax_rate'] ?? 10,
+                'tax_rate' => $first['tax_rate'] ?? 18,
                 'priceManual' => true,
                 'note' => $first['note'],
                 'commandTime' => $first['commandTime'],
@@ -1798,7 +1802,7 @@ class OrderController extends Controller
                 'name' => $first['name'],
                 'qty' => $sumQty,
                 'price' => $mergedPrice,
-                'tax_rate' => $first['tax_rate'] ?? 10,
+                'tax_rate' => $first['tax_rate'] ?? 18,
                 'priceManual' => true,
                 'note' => $first['note'],
                 'commandTime' => $first['commandTime'],
@@ -2251,7 +2255,7 @@ class OrderController extends Controller
                 if ($lockedProductBranches->has($productId)) {
                     $productBranch = $lockedProductBranches->get($productId);
                     $item['price'] = (float) $productBranch->price;
-                    $item['tax_rate'] = (float) ($productBranch->taxRate?->tax_rate ?? 0);
+                    $item['tax_rate'] = (float) ($productBranch->taxRate?->tax_rate ?? 18);
                     $item['priceManual'] = false;
                 }
             }
@@ -2347,10 +2351,10 @@ class OrderController extends Controller
         }
         $subtotal = round($subtotal, 6);
 
-        // Tax y total: usar los enviados por el front o calcular (10% impuesto)
+        // Tax y total: usar los enviados por el front o calcular (18% IGV por defecto)
         $tax = ! $canEditOrderPrices
             ? $lockedTax
-            : ($request->has('tax') ? (float) $request->tax : round($subtotal * 0.10, 6));
+            : ($request->has('tax') ? (float) $request->tax : round($subtotal * 0.18, 6));
         $total = ! $canEditOrderPrices
             ? $lockedTotal
             : ($request->has('total') ? (float) $request->total : round($subtotal + $tax, 6));

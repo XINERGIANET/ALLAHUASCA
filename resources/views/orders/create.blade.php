@@ -4092,7 +4092,7 @@
                                 clampTakeawayQty(existing);
                             }
                             if (existing.tax_rate === undefined || existing.tax_rate === null) {
-                                existing.tax_rate = parseFloat(productBranch.tax_rate ?? 10);
+                                existing.tax_rate = parseFloat(productBranch.tax_rate ?? 18);
                             }
                             existing.complements = selectedComplements;
                             existing.promotionSelection = promotionSelection;
@@ -4112,7 +4112,7 @@
                                 name: prod.name || 'Sin nombre',
                                 qty: qtyRequested,
                                 price: price,
-                                tax_rate: parseFloat(productBranch.tax_rate ?? 10),
+                                tax_rate: parseFloat(productBranch.tax_rate ?? 18),
                                 note: "",
                                 delivered: false,
                                 courtesyQty: 0,
