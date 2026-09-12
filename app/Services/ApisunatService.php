@@ -124,7 +124,14 @@ class ApisunatService
         $apiUrl = $this->resolveApiUrl($config);
 
         // 1. Obtener número local asignado a esta venta (ej: 11)
-        $localNum = (int) preg_replace('/\D+/', '', (string) $sale->number);
+        // Compatibilidad: algunos números locales llevan un "1" inicial heredado (ej. "100000381"
+        // en vez de "00000381"). SUNAT/Apisunat exige correlativos de máximo 8 dígitos, así que
+        // hay que quitar ese prefijo antes de usarlo (mismo criterio que generateSaleNumberForSplit).
+        $rawLocalNumber = preg_replace('/\D+/', '', (string) $sale->number);
+        if (strlen($rawLocalNumber) > 8 && str_starts_with($rawLocalNumber, '100')) {
+            $rawLocalNumber = substr($rawLocalNumber, 1);
+        }
+        $localNum = (int) $rawLocalNumber;
 
         // 2. Obtener todos los correlativos locales ya emitidos electrónicamente
         $usedNumbers = Movement::query()
