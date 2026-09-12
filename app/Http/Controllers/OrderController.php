@@ -1028,8 +1028,10 @@ class OrderController extends Controller
                 }
             }
 
-            // Datos del mozo asignado si la mesa está ocupada
-            $assignedUserId = (int) ($orderMovement?->movement?->user_id ?? 0);
+            // Datos del mozo asignado si la mesa está ocupada. Usar responsible_id (el mozo
+            // real, resuelto por PIN o selección) en vez de user_id (la cuenta que envió la
+            // petición, que en dispositivos compartidos es la misma para todos los mozos).
+            $assignedUserId = (int) ($orderMovement?->movement?->responsible_id ?? $orderMovement?->movement?->user_id ?? 0);
             $assignedPersonId = (int) ($orderMovement?->movement?->person_id ?? 0);
             $waiterName = $orderMovement?->movement?->responsible_name ?? $orderMovement?->movement?->user_name ?? '-';
 
@@ -1200,7 +1202,9 @@ class OrderController extends Controller
         $totalWithTax = $this->orderMovementDisplayTotal($orderMovement);
 
         if ($orderMovement && $totalWithTax > 0) {
-            $assignedUserId = (int) ($orderMovement->movement?->user_id ?? 0);
+            // Usar responsible_id (el mozo real) en vez de user_id (la cuenta de la petición),
+            // igual que en tablesData(), para no bloquear al mozo su propia mesa.
+            $assignedUserId = (int) ($orderMovement->movement?->responsible_id ?? $orderMovement->movement?->user_id ?? 0);
             $assignedPersonId = (int) ($orderMovement->movement?->person_id ?? 0);
             $isSameUser = ($currentUserId > 0 && $assignedUserId > 0 && $currentUserId === $assignedUserId)
                        || ($currentPersonId > 0 && $assignedPersonId > 0 && $currentPersonId === $assignedPersonId);
