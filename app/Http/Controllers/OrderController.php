@@ -674,6 +674,9 @@ class OrderController extends Controller
         $branchId = session('branch_id');
         $profileId = session('profile_id') ?? $request->user()?->profile_id;
         $waiterPinEnabled = $this->shouldRequireWaiterPin($branchId ? (int) $branchId : null, $profileId);
+        $isMozo = current_user_is_mozo();
+        $currentUserId = (int) (session('user_id') ?: auth()->id());
+        $currentPersonId = (int) (session('person_id') ?: auth()->user()?->person_id);
 
         $areas = Area::query()
             ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
@@ -714,7 +717,7 @@ class OrderController extends Controller
             ->get()
             ->groupBy('table_id');
 
-        $tablesPayload = $tables->map(function (Table $table) use ($activeOrderMovements, $branchId) {
+        $tablesPayload = $tables->map(function (Table $table) use ($activeOrderMovements, $branchId, $isMozo, $currentUserId, $currentPersonId) {
             $elapsed = '--:--';
             if (! empty($table->opened_at)) {
                 try {
@@ -752,6 +755,16 @@ class OrderController extends Controller
                 $situation = 'libre';
                 $totalWithTax = 0;
                 $elapsed = '--:--';
+            }
+
+            // Si el perfil es Mozo, ocultar mesas atendidas por OTRO mozo (mismo criterio que tablesData()).
+            $hideForMozo = false;
+            if ($isMozo && $situation === 'ocupada') {
+                $assignedUserId = (int) ($orderMovement?->movement?->responsible_id ?? $orderMovement?->movement?->user_id ?? 0);
+                $assignedPersonId = (int) ($orderMovement?->movement?->person_id ?? 0);
+                $isSameUser = ($currentUserId > 0 && $assignedUserId > 0 && $currentUserId === $assignedUserId)
+                    || ($currentPersonId > 0 && $assignedPersonId > 0 && $currentPersonId === $assignedPersonId);
+                $hideForMozo = ! $isSameUser && ($assignedUserId > 0 || $assignedPersonId > 0);
             }
 
             $productsText = '';
@@ -808,8 +821,11 @@ class OrderController extends Controller
                 'opened_at' => $openedAtForJs,
                 'products_text' => strtolower($productsText),
                 'orders_count' => $ordersCount,
+                'hide_for_mozo' => $hideForMozo,
             ];
-        })->values();
+        })
+        ->filter(fn($t) => ! ($isMozo && ($t['hide_for_mozo'] ?? false)))
+        ->values();
 
         $areasArray = $areas->map(function ($area) {
             return [
@@ -1559,7 +1575,9 @@ class OrderController extends Controller
             'pendingMovementId' => $pendingOrder?->movement_id,
             'pendingClientId' => $pendingClientId,
             'pendingClientName' => $pendingClientName,
-            'pendingWaiterId' => $pendingOrder?->movement?->person_id ?? session('waiter_person_id'),
+            // Ojo: movement->person_id es el CLIENTE, no el mozo. El mozo real está en
+            // responsible_id (un user_id); hay que resolver el person_id de ESE usuario.
+            'pendingWaiterId' => $pendingOrder?->movement?->responsibleUser?->person_id ?? session('waiter_person_id'),
             'pendingWaiterName' => $pendingOrder?->movement?->responsible_name ?? session('waiter_name'),
             'pendingPeopleCount' => (int) ($pendingOrder?->people_count ?: ($table->capacity ?? 1)),
             'pendingCancelledDetails' => $pendingCancelledDetails,
@@ -1950,7 +1968,9 @@ class OrderController extends Controller
             'pendingMovementId' => $pendingOrder?->movement_id,
             'pendingClientId' => $pendingClientId,
             'pendingClientName' => $pendingClientName,
-            'pendingWaiterId' => $pendingOrder?->movement?->person_id ?? session('waiter_person_id'),
+            // Ojo: movement->person_id es el CLIENTE, no el mozo. El mozo real está en
+            // responsible_id (un user_id); hay que resolver el person_id de ESE usuario.
+            'pendingWaiterId' => $pendingOrder?->movement?->responsibleUser?->person_id ?? session('waiter_person_id'),
             'pendingWaiterName' => $pendingOrder?->movement?->responsible_name ?? session('waiter_name'),
             'pendingPeopleCount' => (int) ($pendingOrder?->people_count ?: 1),
             'pendingCancelledDetails' => $pendingCancelledDetails,
