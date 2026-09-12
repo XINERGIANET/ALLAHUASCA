@@ -15,10 +15,18 @@ use Illuminate\Support\Str;
 
 class ApisunatService
 {
+    /**
+     * Normaliza un número local o comprobante a su correlativo entero para SUNAT/Apisunat (máx. 8 dígitos),
+     * quitando prefijo de serie (ej: "B001-00000057" -> 57) y el "1" inicial heredado que algunos números locales arrastran (ej. "100000381" -> 381).
+     */
     public function normalizeCorrelative(mixed $number): int
     {
-        $raw = preg_replace('/\D+/', '', (string) $number) ?: '';
-        if (strlen($raw) === 9 && str_starts_with($raw, '1')) {
+        $str = (string) $number;
+        if (str_contains($str, '-')) {
+            $str = substr($str, strrpos($str, '-') + 1);
+        }
+        $raw = preg_replace('/\D+/', '', $str) ?: '';
+        if (strlen($raw) >= 9 && str_starts_with($raw, '1')) {
             $raw = substr($raw, 1);
         }
 
