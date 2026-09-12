@@ -1457,7 +1457,7 @@
             })();
 
             function sincronizarApisunat() {
-                if (!confirm("¿Desea consultar en APISUNAT los últimos correlativos emitidos para sincronizar las series de la sucursal activa?")) return;
+                if (!confirm("¿Desea conciliar los comprobantes de APISUNAT con sus ventas y reordenar únicamente los pendientes desde el siguiente correlativo libre? No se enviará ningún comprobante.")) return;
                 const token = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}';
                 fetch("{{ route('sales.sync.apisunat') }}", {
                     method: 'POST',

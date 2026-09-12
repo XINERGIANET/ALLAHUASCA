@@ -3289,17 +3289,14 @@ class SalesController extends Controller
             // Continuar si no hay conexión a APISUNAT
         }
 
-        $lastLocalMax = ! empty($usedNumbers) ? max($usedNumbers) : 0;
-        $startCandidate = max(1, $apisunatNext, $lastLocalMax > 0 ? $lastLocalMax + 1 : 1);
-
-        $candidate = 1;
+        // Se parte del siguiente correlativo remoto, no del maximo local: los
+        // numeros 100000xxx heredados no deben empujar la secuencia hacia arriba.
+        $candidate = max(1, $apisunatNext);
         while (isset($usedSet[$candidate])) {
             $candidate++;
         }
 
-        $nextCorrelative = max($candidate, $startCandidate);
-
-        return str_pad((string) $nextCorrelative, 8, '0', STR_PAD_LEFT);
+        return str_pad((string) $candidate, 8, '0', STR_PAD_LEFT);
     }
 
     private function resolveDocumentAbbreviation(string $documentName): string
@@ -3859,6 +3856,10 @@ class SalesController extends Controller
                 $skippedCount++;
             } else {
                 $errorCount++;
+                return response()->json([
+                    'success' => false,
+                    'message' => "Envio detenido para no dejar huecos. Enviados: {$sentCount}. Error en la venta {$movement->id}: ".($res['message'] ?? 'error desconocido'),
+                ], 422);
             }
         }
 
@@ -4216,48 +4217,7 @@ class SalesController extends Controller
                 return response()->json(['success' => false, 'message' => 'La sucursal no tiene facturación electrónica configurada.'], 422);
             }
 
-            $documentTypes = DocumentType::where(function ($q) {
-                $q->where('name', 'like', '%boleta%')
-                  ->orWhere('name', 'like', '%factura%');
-            })->get();
-
-            $summary = [];
-
-            DB::transaction(function () use ($branch, $documentTypes, $apisunatService, &$summary) {
-                foreach ($documentTypes as $docType) {
-                    $typeName = mb_strtolower($docType->name ?? '', 'UTF-8');
-                    $sunatTypeCode = str_contains($typeName, 'factura') ? '01' : '03';
-
-                    $nextFreeNum = $apisunatService->fetchLastDocumentNumber($branch, $sunatTypeCode);
-                    if ($nextFreeNum <= 0) {
-                        continue;
-                    }
-
-                    $unemittedMovements = Movement::query()
-                        ->where('branch_id', $branch->id)
-                        ->where('movement_type_id', 2)
-                        ->where('document_type_id', $docType->id)
-                        ->whereNull('electronic_invoice_external_id')
-                        ->orderBy('moved_at', 'asc')
-                        ->orderBy('id', 'asc')
-                        ->get();
-
-                    $seq = $nextFreeNum;
-                    foreach ($unemittedMovements as $m) {
-                        $padNum = str_pad((string) $seq, 8, '0', STR_PAD_LEFT);
-                        $m->number = $padNum;
-                        $m->save();
-                        $seq++;
-                    }
-
-                    $summary[] = "{$docType->name}: Próximo libre -> " . str_pad((string) $nextFreeNum, 8, '0', STR_PAD_LEFT);
-                }
-            });
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Sincronización con APISUNAT realizada correctamente: ' . implode(' | ', $summary),
-            ]);
+            return response()->json($apisunatService->reconcileBranchDocuments($branch));
         } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,

@@ -5,14 +5,26 @@ namespace App\Services;
 use App\Models\Branch;
 use App\Models\BranchElectronicBillingConfig;
 use App\Models\BranchParameter;
+use App\Models\DocumentType;
 use App\Models\Movement;
 use App\Models\TaxRate;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class ApisunatService
 {
+    public function normalizeCorrelative(mixed $number): int
+    {
+        $raw = preg_replace('/\D+/', '', (string) $number) ?: '';
+        if (strlen($raw) === 9 && str_starts_with($raw, '1')) {
+            $raw = substr($raw, 1);
+        }
+
+        return (int) $raw;
+    }
+
     public function isEligibleDocument(Movement $sale): bool
     {
         $docName = mb_strtolower(trim((string) ($sale->documentType?->name ?? '')), 'UTF-8');
@@ -123,24 +135,6 @@ class ApisunatService
         $totals = $this->resolveMovementTotals($sale);
         $apiUrl = $this->resolveApiUrl($config);
 
-        // 1. Obtener número local asignado a esta venta (ej: 11)
-        $localNum = (int) preg_replace('/\D+/', '', (string) $sale->number);
-
-        // 2. Obtener todos los correlativos locales ya emitidos electrónicamente
-        $usedNumbers = Movement::query()
-            ->where('branch_id', $sale->branch_id)
-            ->where('document_type_id', $sale->document_type_id)
-            ->where('movement_type_id', 2)
-            ->whereNotNull('electronic_invoice_external_id')
-            ->pluck('number')
-            ->map(fn ($n) => (int) preg_replace('/\D+/', '', (string) $n))
-            ->filter(fn ($n) => $n > 0)
-            ->toArray();
-
-        $usedSet = array_flip($usedNumbers);
-
-        // 3. Consultar el último número emitido en APISUNAT
-        $apiLastNum = 0;
         $correlativeResp = Http::timeout(20)->post($apiUrl.'/personas/lastDocument', [
             'personaId' => (string) $config->persona_id,
             'personaToken' => (string) $config->persona_token,
@@ -148,41 +142,14 @@ class ApisunatService
             'serie' => $catalog['serie'],
         ]);
 
-        if ($correlativeResp->successful()) {
-            $obj = $correlativeResp->object();
-            $sug = (int) data_get($obj, 'suggestedNumber', 0);
-            $last = (int) data_get($obj, 'lastNumber', 0);
-            $apiLastNum = max($sug, $last);
-        }
+        // La numeracion remota es la fuente de verdad. suggestedNumber ya es
+        // el siguiente libre; si no viene, lastNumber + 1 cumple lo mismo.
+        $suggested = $this->normalizeCorrelative(data_get($correlativeResp->json(), 'suggestedNumber', 0));
+        $last = $this->normalizeCorrelative(data_get($correlativeResp->json(), 'lastNumber', 0));
+        $targetNum = $suggested > 0 ? $suggested : ($last > 0 ? $last + 1 : 1);
 
-        // 4. Determinación inteligente del correlativo para APISUNAT:
-        // A. Si la venta ya tiene un número local propio ($localNum) y este NO ha sido emitido aún, probar primero con $localNum.
-        // B. Si $localNum ya está ocupado o es 0, buscar el primer hueco no emitido ($firstGap).
-        // C. De lo contrario, usar $apiLastNum + 1.
-        if ($localNum > 0 && ! isset($usedSet[$localNum])) {
-            $targetNum = $localNum;
-        } else {
-            $firstGap = null;
-            if ($apiLastNum > 0) {
-                for ($i = 1; $i <= $apiLastNum; $i++) {
-                    if (! isset($usedSet[$i])) {
-                        $firstGap = $i;
-                        break;
-                    }
-                }
-            }
-
-            if ($firstGap !== null) {
-                $targetNum = $firstGap;
-            } elseif ($apiLastNum > 0) {
-                $targetNum = $apiLastNum + 1;
-            } else {
-                $candidate = 1;
-                while (isset($usedSet[$candidate])) {
-                    $candidate++;
-                }
-                $targetNum = $candidate;
-            }
+        if ($correlativeResp->failed() || $targetNum <= 0 || $targetNum > 99999999) {
+            throw new \RuntimeException('No se pudo obtener un correlativo valido de APISUNAT. No se envio el comprobante para evitar huecos.');
         }
 
         $attempts = 0;
@@ -193,10 +160,6 @@ class ApisunatService
         // 5. Bucle de reintento automático por numeración repetida en APISUNAT (hasta 25 intentos)
         while ($attempts < 25) {
             $attempts++;
-            while (isset($usedSet[$targetNum])) {
-                $targetNum++;
-            }
-
             $number = str_pad((string) $targetNum, 8, '0', STR_PAD_LEFT);
             $fileName = trim((string) ($branch?->ruc ?? '0')).'-'.$catalog['type'].'-'.$catalog['serie'].'-'.$number;
             $documentBody = $this->buildDocumentBody($sale, $catalog, $customerDocument, $customerDocType, $totals, $number);
@@ -234,8 +197,10 @@ class ApisunatService
                 str_contains($lowerErr, 'duplicate') ||
                 str_contains($lowerErr, 'exist')
             ) {
-                $usedSet[$targetNum] = true;
-                $targetNum++;
+                $targetNum = $this->fetchLastDocumentNumber($branch, $catalog['type']);
+                if ($targetNum <= 0 || $targetNum > 99999999) {
+                    throw new \RuntimeException('No se pudo recuperar el siguiente correlativo luego de detectar un duplicado.');
+                }
                 continue;
             }
 
@@ -342,6 +307,243 @@ class ApisunatService
         }
 
         return 0;
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    public function fetchAllDocuments(?Branch $branch, string $type, string $series): array
+    {
+        $config = $this->resolveConfigForBranch($branch);
+        if (! $config || ! $config->enabled) {
+            throw new \RuntimeException('La sucursal no tiene APISUNAT configurado.');
+        }
+
+        $documents = [];
+        $limit = 100;
+        for ($skip = 0; $skip < 10000; $skip += $limit) {
+            $response = Http::timeout(30)->get($this->resolveApiUrl($config).'/documents/getAll', [
+                'personaId' => (string) $config->persona_id,
+                'personaToken' => (string) $config->persona_token,
+                'type' => $type,
+                'serie' => $series,
+                'limit' => $limit,
+                'skip' => $skip,
+                'order' => 'ASC',
+            ]);
+
+            if ($response->failed()) {
+                throw new \RuntimeException('No se pudo descargar el listado de comprobantes de APISUNAT.');
+            }
+
+            $page = $this->documentListFromResponse($response->json());
+            $documents = array_merge($documents, $page);
+            if (count($page) < $limit) {
+                break;
+            }
+        }
+
+        return $documents;
+    }
+
+    /**
+     * Enlaza el inventario real de APISUNAT y luego resecuencia solamente las
+     * ventas pendientes. Ante cualquier ambiguedad, ese tipo no se resecuencia.
+     *
+     * @return array{success:bool,message:string}
+     */
+    public function reconcileBranchDocuments(Branch $branch): array
+    {
+        $config = $this->resolveConfigForBranch($branch);
+        if (! $config || ! $this->isConfiguredForBranch($branch)) {
+            throw new \RuntimeException('La sucursal no tiene APISUNAT configurado.');
+        }
+
+        $documentTypes = DocumentType::where(function ($query) {
+            $query->where('name', 'like', '%boleta%')->orWhere('name', 'like', '%factura%');
+        })->get();
+        $summary = [];
+        $problems = [];
+
+        foreach ($documentTypes as $documentType) {
+            $name = mb_strtolower((string) $documentType->name, 'UTF-8');
+            $type = str_contains($name, 'factura') ? '01' : '03';
+            $series = trim((string) ($type === '01' ? $config->series_factura : $config->series_boleta));
+            $remoteDocuments = $this->fetchAllDocuments($branch, $type, $series);
+            $next = $this->fetchLastDocumentNumber($branch, $type);
+
+            if ($next <= 0) {
+                throw new \RuntimeException("APISUNAT no devolvio el siguiente correlativo para {$series}.");
+            }
+            if ($next > 1 && $remoteDocuments === []) {
+                throw new \RuntimeException("APISUNAT reporta correlativos usados para {$series}, pero no devolvio su listado.");
+            }
+
+            $movements = Movement::with('salesMovement')
+                ->where('branch_id', $branch->id)
+                ->where('movement_type_id', 2)
+                ->where('document_type_id', $documentType->id)
+                ->orderBy('moved_at')->orderBy('id')->get();
+            $linked = 0;
+            $seenRemote = [];
+            $typeProblems = [];
+
+            DB::transaction(function () use ($remoteDocuments, $movements, $branch, $config, $type, $series, &$linked, &$seenRemote, &$typeProblems) {
+                foreach ($remoteDocuments as $document) {
+                    $remote = $this->remoteDocumentMetadata($document);
+                    if ($remote['status'] === 'EXCEPCION') {
+                        continue;
+                    }
+                    if (($remote['type'] !== '' && $remote['type'] !== $type)
+                        || ($remote['series'] !== '' && strcasecmp($remote['series'], $series) !== 0)) {
+                        continue;
+                    }
+                    if ($remote['number'] <= 0 || $remote['external_id'] === '') {
+                        $typeProblems[] = 'documento remoto sin ID o correlativo';
+                        continue;
+                    }
+                    if (isset($seenRemote[$remote['number']])) {
+                        $typeProblems[] = "{$series}-{$remote['number_padded']} esta duplicado en APISUNAT";
+                        continue;
+                    }
+                    $seenRemote[$remote['number']] = true;
+
+                    $fullNumber = $series.'-'.$remote['number_padded'];
+                    $candidates = $movements->filter(
+                        fn (Movement $movement) => $movement->electronic_invoice_external_id === $remote['external_id']
+                    );
+                    if ($candidates->isEmpty()) {
+                        $candidates = $movements->filter(
+                            fn (Movement $movement) => $movement->electronic_invoice_number === $fullNumber
+                        );
+                    }
+                    if ($candidates->isEmpty()) {
+                        $candidates = $movements->filter(
+                            fn (Movement $movement) => $this->normalizeCorrelative($movement->number) === $remote['number']
+                        );
+                    }
+                    if ($candidates->count() !== 1) {
+                        $typeProblems[] = "{$fullNumber} tiene {$candidates->count()} ventas locales candidatas";
+                        continue;
+                    }
+
+                    /** @var Movement $movement */
+                    $movement = $candidates->first();
+                    if ($movement->electronic_invoice_external_id
+                        && $movement->electronic_invoice_external_id !== $remote['external_id']) {
+                        $typeProblems[] = "venta {$movement->id} ya enlazada a otro documento";
+                        continue;
+                    }
+
+                    $fileName = preg_replace('/\.pdf$/i', '', $remote['file_name']) ?: trim((string) $branch->ruc)."-{$type}-{$fullNumber}";
+                    $apiUrl = rtrim((string) ($config->api_url ?: config('apisunat.url')), '/');
+                    $movement->forceFill([
+                        'number' => $remote['number_padded'],
+                        'electronic_invoice_provider' => 'apisunat',
+                        'electronic_invoice_status' => 'SENT',
+                        'electronic_invoice_external_id' => $remote['external_id'],
+                        'electronic_invoice_series' => $series,
+                        'electronic_invoice_number' => $fullNumber,
+                        'electronic_invoice_file_name' => $fileName.'.pdf',
+                        'electronic_invoice_pdf_ticket_url' => $apiUrl.'/documents/'.$remote['external_id'].'/getPDF/ticket80mm/'.$fileName.'.pdf',
+                        'electronic_invoice_pdf_a4_url' => $apiUrl.'/documents/'.$remote['external_id'].'/getPDF/A4/'.$fileName.'.pdf',
+                        'electronic_invoice_xml_url' => $remote['xml_url'],
+                        'electronic_invoice_cdr_url' => $remote['cdr_url'],
+                        'electronic_invoice_response' => $remote['payload'],
+                    ])->save();
+                    $movement->salesMovement?->update(['series' => preg_replace('/^[A-Z]+/i', '', $series)]);
+                    $linked++;
+                }
+            });
+
+            $missingRemote = [];
+            for ($number = 1; $number < $next; $number++) {
+                if (! isset($seenRemote[$number])) {
+                    $missingRemote[] = str_pad((string) $number, 8, '0', STR_PAD_LEFT);
+                }
+            }
+            if ($missingRemote !== []) {
+                $typeProblems[] = "{$series} tiene huecos remotos: ".implode(', ', array_slice($missingRemote, 0, 10));
+            }
+
+            if ($typeProblems !== []) {
+                $problems = array_merge($problems, $typeProblems);
+                $summary[] = "{$series}: {$linked} enlazados; pendientes sin reordenar por seguridad";
+                continue;
+            }
+
+            $pending = Movement::with('salesMovement')
+                ->where('branch_id', $branch->id)
+                ->where('movement_type_id', 2)
+                ->where('document_type_id', $documentType->id)
+                ->whereNull('electronic_invoice_external_id')
+                ->orderBy('moved_at')->orderBy('id')->get();
+            DB::transaction(function () use ($pending, $next, $series) {
+                $sequence = $next;
+                foreach ($pending as $movement) {
+                    $movement->forceFill([
+                        'number' => str_pad((string) $sequence, 8, '0', STR_PAD_LEFT),
+                        'electronic_invoice_series' => null,
+                        'electronic_invoice_number' => null,
+                    ])->save();
+                    $movement->salesMovement?->update(['series' => preg_replace('/^[A-Z]+/i', '', $series)]);
+                    $sequence++;
+                }
+            });
+            $summary[] = "{$series}: {$linked} enlazados; {$pending->count()} pendientes desde ".str_pad((string) $next, 8, '0', STR_PAD_LEFT);
+        }
+
+        return [
+            'success' => $problems === [],
+            'message' => 'Conciliacion APISUNAT: '.implode(' | ', $summary)
+                .($problems ? '. Revisar: '.implode('; ', array_slice(array_unique($problems), 0, 10)) : ''),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    public function remoteDocumentMetadata(array $document): array
+    {
+        $fileName = trim((string) (data_get($document, 'fileName') ?: data_get($document, 'file_name', '')));
+        $type = trim((string) data_get($document, 'type', ''));
+        $series = strtoupper(trim((string) (data_get($document, 'serie') ?: data_get($document, 'series', ''))));
+        $number = $this->normalizeCorrelative(data_get($document, 'number', ''));
+
+        if (preg_match('/-(\d{2})-([A-Z0-9]{4})-(\d{1,8})(?:\.\w+)?$/i', $fileName, $matches) === 1) {
+            $type = $type !== '' ? $type : $matches[1];
+            $series = $series !== '' ? $series : strtoupper($matches[2]);
+            $number = $number > 0 ? $number : (int) $matches[3];
+        }
+
+        return [
+            'external_id' => trim((string) (data_get($document, 'documentId') ?: data_get($document, '_id') ?: data_get($document, 'id', ''))),
+            'type' => $type,
+            'series' => $series,
+            'number' => $number,
+            'number_padded' => $number > 0 ? str_pad((string) $number, 8, '0', STR_PAD_LEFT) : '',
+            'file_name' => $fileName,
+            'status' => strtoupper(trim((string) data_get($document, 'status', ''))),
+            'xml_url' => $this->findUrlByKeyword($document, ['xml']),
+            'cdr_url' => $this->findUrlByKeyword($document, ['cdr']),
+            'payload' => $document,
+        ];
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function documentListFromResponse(mixed $payload): array
+    {
+        if (! is_array($payload)) {
+            return [];
+        }
+        if (array_is_list($payload)) {
+            return array_values(array_filter($payload, 'is_array'));
+        }
+
+        foreach (['documents', 'data', 'payload', 'data.documents', 'payload.documents'] as $key) {
+            $candidate = data_get($payload, $key);
+            if (is_array($candidate) && array_is_list($candidate)) {
+                return array_values(array_filter($candidate, 'is_array'));
+            }
+        }
+
+        return [];
     }
 
     public function consultDocument(?Branch $branch, string $document): array

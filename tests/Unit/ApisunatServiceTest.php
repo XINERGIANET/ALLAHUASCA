@@ -73,3 +73,28 @@ test('apisunat validator accepts invoice lines with valid igv tax data', functio
 
     expect(true)->toBeTrue();
 });
+
+test('normalizes the inherited nine digit local prefix', function () {
+    $service = new ApisunatService;
+
+    expect($service->normalizeCorrelative('100000409'))->toBe(409)
+        ->and($service->normalizeCorrelative('00000066'))->toBe(66)
+        ->and($service->normalizeCorrelative('B001-00000057'))->toBe(57);
+});
+
+test('extracts reconciliation keys from an apisunat document', function () {
+    $metadata = (new ApisunatService)->remoteDocumentMetadata([
+        '_id' => 'remote-document-id',
+        'status' => 'ACEPTADO',
+        'fileName' => '20615919498-03-B001-00000066',
+        'xml' => 'https://back.apisunat.com/document.xml',
+        'cdr' => 'https://back.apisunat.com/cdr.xml',
+    ]);
+
+    expect($metadata['external_id'])->toBe('remote-document-id')
+        ->and($metadata['type'])->toBe('03')
+        ->and($metadata['series'])->toBe('B001')
+        ->and($metadata['number'])->toBe(66)
+        ->and($metadata['number_padded'])->toBe('00000066')
+        ->and($metadata['status'])->toBe('ACEPTADO');
+});

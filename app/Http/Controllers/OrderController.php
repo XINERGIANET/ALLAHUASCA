@@ -4391,17 +4391,12 @@ class OrderController extends Controller
             // Continuar si no se pudo conectar a APISUNAT
         }
 
-        $lastLocalMax = ! empty($usedNumbers) ? max($usedNumbers) : 0;
-        $startCandidate = max(1, $apisunatNext, $lastLocalMax > 0 ? $lastLocalMax + 1 : 1);
-
-        $candidate = 1;
+        $candidate = max(1, $apisunatNext);
         while (isset($usedSet[$candidate])) {
             $candidate++;
         }
 
-        $nextCorrelative = max($candidate, $startCandidate);
-
-        return str_pad((string) $nextCorrelative, 8, '0', STR_PAD_LEFT);
+        return str_pad((string) $candidate, 8, '0', STR_PAD_LEFT);
     }
 
     /**
