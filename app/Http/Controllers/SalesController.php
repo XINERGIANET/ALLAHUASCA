@@ -3811,12 +3811,17 @@ class SalesController extends Controller
         }
     }
 
+    protected function syncElectronicInvoiceForSale(Movement $sale, ApisunatService $apisunatService): array
+    {
+        return $apisunatService->emitSale($sale);
+    }
+
     /**
      * Enviar masivamente Boletas y Facturas a APISUNAT.
      */
     public function batchSyncSunat(Request $request, ApisunatService $apisunatService)
     {
-        $branchId = session('branch_id');
+        $branchId = (int) session('branch_id');
         $branch = $branchId ? Branch::find($branchId) : null;
 
         if (! $branch || ! $apisunatService->isConfiguredForBranch($branch)) {
@@ -3827,46 +3832,60 @@ class SalesController extends Controller
             ->with(['documentType', 'branch', 'salesMovement'])
             ->where('branch_id', $branchId)
             ->where('movement_type_id', 2)
+            ->where(function ($q) {
+                $q->whereNull('electronic_invoice_external_id')
+                  ->orWhere('electronic_invoice_status', '!=', 'SENT');
+            })
             ->whereHas('documentType', function ($q) {
                 $q->where(DB::raw('LOWER(name)'), 'like', '%boleta%')
                   ->orWhere(DB::raw('LOWER(name)'), 'like', '%factura%');
             })
+            ->orderBy('moved_at', 'asc')
+            ->orderBy('id', 'asc')
             ->get();
+
+        if ($movements->isEmpty()) {
+            return response()->json(['success' => true, 'message' => 'No hay ventas pendientes por enviar a APISUNAT.']);
+        }
 
         $sentCount = 0;
         $adjustedDateCount = 0;
         $skippedCount = 0;
-        $errorCount = 0;
+        $errors = [];
 
         foreach ($movements as $movement) {
-            if ($movement->electronic_invoice_external_id) {
+            if ($movement->electronic_invoice_external_id && $movement->electronic_invoice_status === 'SENT') {
                 $skippedCount++;
                 continue;
             }
 
-            $dateInfo = $apisunatService->resolveSunatIssueDate($movement);
-            if ($dateInfo['adjusted'] ?? false) {
-                $adjustedDateCount++;
-            }
+            try {
+                $dateInfo = $apisunatService->resolveSunatIssueDate($movement);
+                if ($dateInfo['adjusted'] ?? false) {
+                    $adjustedDateCount++;
+                }
 
-            $res = $this->syncElectronicInvoiceForSale($movement, $apisunatService);
-            if (($res['status'] ?? '') === 'SENT') {
-                $sentCount++;
-            } elseif (($res['status'] ?? '') === 'SKIPPED') {
-                $skippedCount++;
-            } else {
-                $errorCount++;
-                return response()->json([
-                    'success' => false,
-                    'message' => "Envio detenido para no dejar huecos. Enviados: {$sentCount}. Error en la venta {$movement->id}: ".($res['message'] ?? 'error desconocido'),
-                ], 422);
+                $res = $this->syncElectronicInvoiceForSale($movement, $apisunatService);
+                if (($res['status'] ?? '') === 'SENT') {
+                    $sentCount++;
+                } elseif (($res['status'] ?? '') === 'SKIPPED') {
+                    $skippedCount++;
+                }
+            } catch (\Throwable $e) {
+                $errors[] = "Venta N° {$movement->number} (ID {$movement->id}): " . $e->getMessage();
             }
         }
 
-        $dateAdjustMsg = $adjustedDateCount > 0 ? " ({$adjustedDateCount} con fecha ajustada al límite de 2 días SUNAT)" : "";
-        $msg = "Envío masivo completado. Enviados: {$sentCount}{$dateAdjustMsg}, Omitidos/Emitidos: {$skippedCount}, Errores: {$errorCount}.";
+        $dateAdjustMsg = $adjustedDateCount > 0 ? " ({$adjustedDateCount} con fecha de emisión ajustada al límite de 2 días SUNAT)" : "";
+        $errMsg = count($errors) > 0 ? ". Errores en " . count($errors) . " ventas" : "";
+        $msg = "Envío masivo completado. Enviados con éxito: {$sentCount}{$dateAdjustMsg}, Omitidos/Emitidos: {$skippedCount}{$errMsg}.";
 
-        return response()->json(['success' => true, 'message' => $msg]);
+        return response()->json([
+            'success' => $sentCount > 0 || count($errors) === 0,
+            'message' => $msg,
+            'emitted_count' => $sentCount,
+            'errors' => array_slice($errors, 0, 5),
+        ]);
     }
 
     /**

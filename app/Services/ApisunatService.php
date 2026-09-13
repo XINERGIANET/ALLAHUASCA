@@ -169,6 +169,15 @@ class ApisunatService
         while ($attempts < 25) {
             $attempts++;
             $number = str_pad((string) $targetNum, 8, '0', STR_PAD_LEFT);
+            $sale->number = $number;
+            $sale->electronic_invoice_series = $catalog['serie'];
+            $sale->electronic_invoice_number = $catalog['serie'].'-'.$number;
+            $sale->save();
+            if ($sale->salesMovement) {
+                $sale->salesMovement->series = preg_replace('/^[A-Z]+/i', '', $catalog['serie']);
+                $sale->salesMovement->save();
+            }
+
             $fileName = trim((string) ($branch?->ruc ?? '0')).'-'.$catalog['type'].'-'.$catalog['serie'].'-'.$number;
             $documentBody = $this->buildDocumentBody($sale, $catalog, $customerDocument, $customerDocType, $totals, $number);
             $this->validateDocumentBodyForSunat($documentBody);
