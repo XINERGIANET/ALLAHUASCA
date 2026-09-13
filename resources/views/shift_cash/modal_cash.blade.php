@@ -1,6 +1,6 @@
 <div class="px-6 py-2 space-y-5" x-data="{
-    totalCount: 14,
-    checkedCount: 14,
+    totalCount: 15,
+    checkedCount: 15,
     updateCount() {
         this.checkedCount = document.querySelectorAll('input[type=checkbox][name^=\'options[\']:checked').length;
         const allChk = document.getElementById('all_options');
@@ -30,7 +30,7 @@
         </div>
         <div class="flex items-center gap-3">
             <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-200 text-gray-800 dark:bg-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-700" x-text="`${checkedCount} / ${totalCount} seleccionados`">
-                14 / 14 seleccionados
+                15 / 15 seleccionados
             </span>
             <label class="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" id="all_options" checked @change="toggleAll($event.target.checked)" class="sr-only peer">
@@ -52,6 +52,7 @@
                 @php
                     $group1 = [
                         ['id' => 'sales_payments_summary', 'label' => 'Resúmenes - Ventas pagadas', 'icon' => 'ri-bar-chart-box-line'],
+                        ['id' => 'tips_summary', 'label' => 'Propinas recaudadas por mozo', 'icon' => 'ri-heart-3-line'],
                         ['id' => 'products_sold_summary', 'label' => 'Consolidado de productos', 'icon' => 'ri-shopping-bag-3-line'],
                         ['id' => 'debts_sales', 'label' => 'Ventas adeudadas', 'icon' => 'ri-time-line'],
                         ['id' => 'debts_sales_summary', 'label' => 'Resúmenes - Ventas adeudadas', 'icon' => 'ri-file-chart-line'],

@@ -636,6 +636,7 @@ class SalesController extends Controller
                 'credit_days' => 'nullable|integer|min:0|max:3650',
                 'discount_type' => 'nullable|string|in:amount,percent',
                 'discount_value' => 'nullable|numeric|min:0',
+                'tip_amount' => 'nullable|numeric|min:0',
                 'notes' => 'nullable|string',
                 'movement_id' => 'nullable|integer|exists:movements,id', // ID del borrador a completar
             ]);
@@ -712,21 +713,24 @@ class SalesController extends Controller
         }
         $pmSum = round($pmSum, 2);
 
+        $requestTipAmount = max(0, (float) $request->input('tip_amount', 0));
+        $totalToCobrar = round($totalPreview + $requestTipAmount, 2);
+
         if ($isCredit) {
             if (empty($validated['person_id'])) {
                 return response()->json(['success' => false, 'message' => 'Para venta a crédito debe seleccionar un cliente identificado.'], 422);
             }
-            if ($pmSum > $totalPreview + 0.02) {
+            if ($pmSum > $totalToCobrar + 0.02) {
                 return response()->json(['success' => false, 'message' => 'El total abonado no puede superar el importe de la venta.'], 422);
             }
-        } elseif ($totalPreview > 0.009) {
+        } elseif ($totalToCobrar > 0.009) {
             if (count($pmRaw) < 1) {
                 return response()->json(['success' => false, 'message' => 'Agregue al menos un método de pago.'], 422);
             }
-            if (abs($pmSum - $totalPreview) > 0.02) {
+            if (abs($pmSum - $totalToCobrar) > 0.02) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'La suma de los métodos de pago (S/ '.number_format($pmSum, 2, '.', '').') debe ser igual al total (S/ '.number_format($totalPreview, 2, '.', '').').',
+                    'message' => 'La suma de los métodos de pago (S/ '.number_format($pmSum, 2, '.', '').') debe ser igual al total a cobrar (S/ '.number_format($totalToCobrar, 2, '.', '').').',
                 ], 422);
             }
             foreach ($pmRaw as $row) {
@@ -919,6 +923,7 @@ class SalesController extends Controller
                     'subtotal' => $subtotal,
                     'tax' => $tax,
                     'total' => $total,
+                    'tip_amount' => $requestTipAmount,
                 ]);
             } else {
                 // Crear nuevo SalesMovement
@@ -939,6 +944,7 @@ class SalesController extends Controller
                     'subtotal' => $subtotal,
                     'tax' => $tax,
                     'total' => $total,
+                    'tip_amount' => $requestTipAmount,
                     'movement_id' => $movement->id,
                     'branch_id' => $branchId,
                 ]);

@@ -147,7 +147,45 @@
             <h2>Resúmenes — Ventas pagadas</h2>
             <table>
                 <tr><th>Comprobantes (ventas cobradas en turno)</th><td class="text-right">{{ $r['paid_sales_summary']['count'] ?? 0 }}</td></tr>
-                <tr><th>Total ventas pagadas</th><td class="text-right">S/ {{ number_format((float) ($r['paid_sales_summary']['total'] ?? 0), 2) }}</td></tr>
+                <tr><th>Total ventas pagadas (ingreso neto)</th><td class="text-right">S/ {{ number_format((float) ($r['paid_sales_summary']['total'] ?? 0), 2) }}</td></tr>
+            </table>
+        </div>
+    @endif
+
+    @if(!empty($r['tips_summary']) && (($r['tips_summary']['total'] ?? 0) > 0 || !empty($r['tips_summary']['by_waiter'])))
+        <div class="section">
+            <h2>❤️ Propinas Recaudadas por Mozo (A entregar a los mozos)</h2>
+            <p class="muted" style="margin-top:-4px; margin-bottom: 6px; font-size:11px;">
+                * Nota: Las propinas son dinero recaudado exclusivamente para los mozos y NO forman parte de los ingresos de la empresa.
+            </p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Mozo / Responsable</th>
+                        <th class="text-center">Ventas con propina</th>
+                        <th class="text-right">Total propina a devolver</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($r['tips_summary']['by_waiter'] ?? [] as $tipRow)
+                        <tr>
+                            <td>{{ $tipRow['waiter'] }}</td>
+                            <td class="text-center">{{ $tipRow['count'] }}</td>
+                            <td class="text-right" style="font-weight: bold; color: #059669;">S/ {{ number_format((float) $tipRow['total'], 2) }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="3" class="text-center muted">No se registraron propinas en este turno.</td></tr>
+                    @endforelse
+                </tbody>
+                @if(!empty($r['tips_summary']['by_waiter']))
+                <tfoot>
+                    <tr style="font-weight: bold; background: #fdf2f8;">
+                        <td>TOTAL PROPINAS RECAUDADAS EN TURNO</td>
+                        <td class="text-center">{{ $r['tips_summary']['count'] ?? 0 }}</td>
+                        <td class="text-right" style="color: #059669;">S/ {{ number_format((float) ($r['tips_summary']['total'] ?? 0), 2) }}</td>
+                    </tr>
+                </tfoot>
+                @endif
             </table>
         </div>
     @endif

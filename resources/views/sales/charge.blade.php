@@ -214,6 +214,19 @@
                                 <input type="hidden" id="document-type-id" name="document_type_id" value="{{ $defaultDocumentTypeId ?? ($documentTypes->first()?->id ?? '') }}">
                             </div>
 
+                            <div class="rounded-xl border border-emerald-100 bg-emerald-50/40 p-3 dark:border-gray-600 dark:bg-gray-800 shadow-sm">
+                                <div class="flex items-center justify-between mb-2">
+                                    <p class="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                                        <i class="fas fa-heart text-emerald-600"></i> Propina Mozo <span class="font-normal text-emerald-600/80 lowercase">(opcional)</span>
+                                    </p>
+                                </div>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-600">S/</span>
+                                    <input type="number" id="charge-tip-amount" step="0.01" min="0" placeholder="0.00" oninput="updatePaymentSummary()"
+                                        class="w-full pl-8 pr-3 py-2 rounded-lg border border-emerald-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-bold tabular-nums text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                                </div>
+                            </div>
+
                             <div class="rounded-xl border border-cyan-100 bg-cyan-50/35 p-3 dark:border-gray-600 dark:bg-gray-800 shadow-sm">
                                 <div class="mb-3 flex items-center justify-between">
                                     <p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Método de pago</p>
@@ -727,12 +740,17 @@
                 return 'S/' + (Number(n) || 0).toFixed(2);
             }
 
-            function calculateTotalPaid() {
-                return paymentMethodsData.reduce((sum, pm) => sum + (parseFloat(pm.amount) || 0), 0);
+            function getChargeTipAmount() {
+                return Math.max(0, parseFloat(document.getElementById('charge-tip-amount')?.value || '0') || 0);
+            }
+
+            function getChargeTotalToPay() {
+                const orderTotal = parseFloat((totalElement?.textContent || 'S/0.00').replace('S/', '').replace(',', '').trim()) || 0;
+                return Math.round((orderTotal + getChargeTipAmount()) * 100) / 100;
             }
 
             function updatePaymentSummary() {
-                const total = parseFloat((totalElement?.textContent || 'S/0.00').replace('S/', '').replace(',', '').trim()) || 0;
+                const total = getChargeTotalToPay();
                 const totalPaid = calculateTotalPaid();
                 const remaining = total - totalPaid;
                 const excess = totalPaid - total;
@@ -1804,8 +1822,9 @@ pmSelectionButtons.forEach(btn => {
                     return;
                 }
 
-                const totalText = (totalElement?.textContent || 'S/0.00').replace('S/', '').replace(',', '').trim();
-                const total = parseFloat(totalText) || 0;
+                const totalOrder = parseFloat(totalText) || 0;
+                const tipAmount = getChargeTipAmount();
+                const totalToPay = getChargeTotalToPay();
                 const totalPaid = calculateTotalPaid();
 
                 const saleModeEl = document.getElementById('payment_type');
@@ -1825,7 +1844,7 @@ pmSelectionButtons.forEach(btn => {
                         showNotification('Error', 'Para venta a crédito seleccione un cliente identificado.', 'error');
                         return;
                     }
-                    if (totalPaid > total + 0.01) {
+                    if (totalPaid > totalToPay + 0.01) {
                         showNotification('Error', 'El abono no puede superar el total de la venta.', 'error');
                         return;
                     }
@@ -1834,8 +1853,8 @@ pmSelectionButtons.forEach(btn => {
                         showNotification('Error', 'Agrega al menos un método de pago', 'error');
                         return;
                     }
-                    if (Math.abs(totalPaid - total) > 0.01) {
-                        showNotification('Error', `La suma de los métodos de pago (${fmtMoney(totalPaid)}) debe ser igual al total (${fmtMoney(total)})`, 'error');
+                    if (Math.abs(totalPaid - totalToPay) > 0.01) {
+                        showNotification('Error', `La suma de los métodos de pago (${fmtMoney(totalPaid)}) debe ser igual al total (${fmtMoney(totalToPay)})`, 'error');
                         return;
                     }
                 }
@@ -1892,6 +1911,7 @@ pmSelectionButtons.forEach(btn => {
                         bank_id: pm.bankId ? parseInt(pm.bankId) : null,
                     })),
                     notes: document.getElementById('sale-notes')?.value || '',
+                    tip_amount: tipAmount,
                     sale_payment_mode: saleMode,
                     credit_days: creditDays,
                 };

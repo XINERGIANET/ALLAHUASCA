@@ -3650,9 +3650,14 @@ class OrderController extends Controller
                 $saleTotal = (float) $remainingSaleDraft['total'];
             }
 
+            $requestTipAmount = max(0, (float) $request->input('tip_amount', 0));
+
             $orderMovement->status = 'FINALIZADO';
             $orderMovement->finished_at = now();
             $orderMovement->payment_type = $saleType === 'CREDITO' ? 'CREDITO' : 'CONTADO';
+            if ($requestTipAmount > 0) {
+                $orderMovement->tip_amount = (float) ($orderMovement->tip_amount ?? 0) + $requestTipAmount;
+            }
             $orderMovement->save();
 
             $orderBaseMovement = Movement::find($orderMovement->movement_id);
@@ -3743,6 +3748,7 @@ class OrderController extends Controller
                         'subtotal' => $saleSubtotal,
                         'tax' => $saleTax,
                         'total' => $saleTotal,
+                        'tip_amount' => $requestTipAmount,
                         'movement_id' => $orderBaseMovement->id,
                         'branch_id' => $branchId,
                     ]);
@@ -3899,7 +3905,7 @@ class OrderController extends Controller
             }
 
             $cashMovement = CashMovements::where('movement_id', $cashEntryMovement->id)->first();
-            $total = $saleTotal;
+            $total = $saleTotal + $requestTipAmount;
             if ($cashMovement) {
                 $cashMovement->update([
                     'payment_concept_id' => $paymentConcept->id,
@@ -4207,6 +4213,12 @@ class OrderController extends Controller
         $cashRegister = CashRegister::find($cashRegisterId);
         $activeSeries = $cashRegister?->series ?? '001';
 
+        $requestTipAmount = max(0, (float) $request->input('tip_amount', 0));
+        if ($requestTipAmount > 0) {
+            $orderMovement->tip_amount = (float) ($orderMovement->tip_amount ?? 0) + $requestTipAmount;
+            $orderMovement->save();
+        }
+
         $salesMovement = SalesMovement::create([
             'branch_snapshot' => [
                 'id' => $branch->id,
@@ -4224,6 +4236,7 @@ class OrderController extends Controller
             'subtotal' => $draft['subtotal'],
             'tax' => $draft['tax'],
             'total' => $draft['total'],
+            'tip_amount' => $requestTipAmount,
             'movement_id' => $splitSaleMovement->id,
             'branch_id' => $branchId,
         ]);

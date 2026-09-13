@@ -613,6 +613,13 @@
                                         <span>Aplicar descuento</span>
                                         <span id="discount-badge" class="hidden px-2 py-0.5 text-xs font-bold bg-[#111827] text-white rounded-full"></span>
                                     </button>
+
+                                    <button type="button" onclick="toggleOrderTipPanel()" id="btn-toggle-tip-panel"
+                                        class="inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-sm">
+                                        <i class="ri-heart-3-line text-lg text-emerald-600 dark:text-emerald-400"></i>
+                                        <span>Agregar propina</span>
+                                        <span id="tip-badge" class="hidden px-2 py-0.5 text-xs font-bold bg-emerald-600 text-white rounded-full"></span>
+                                    </button>
                                 </div>
 
                                 <!-- Panel de Descuento -->
@@ -672,6 +679,67 @@
                                         <div class="border-t border-dashed border-gray-200 dark:border-gray-700 my-1 pt-1 flex justify-between items-center font-bold text-slate-900 dark:text-white text-sm">
                                             <span>Total final a pagar:</span>
                                             <span id="order-discount-final-total" class="text-indigo-600 dark:text-indigo-400 text-base tabular-nums">S/ 0.00</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Panel de Propina -->
+                                <div id="order-tip-panel" class="hidden mb-3 p-3 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-xl border border-emerald-200 dark:border-emerald-800/60 space-y-3 shadow-xs">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-1.5">
+                                            <i class="ri-heart-3-fill text-base text-emerald-600 dark:text-emerald-400"></i>
+                                            <span class="text-xs font-bold uppercase tracking-wider text-emerald-900 dark:text-emerald-200">Propina para Mozo</span>
+                                        </div>
+                                        <button type="button" onclick="clearOrderTip()" class="text-xs font-semibold text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors">Limpiar</button>
+                                    </div>
+
+                                    <!-- Opciones rápidas de propina -->
+                                    <div>
+                                        <span class="block text-[10px] uppercase font-bold text-emerald-700/80 dark:text-emerald-400/80 mb-1.5">Sugerencias rápidas:</span>
+                                        <div class="flex items-center gap-1.5 flex-wrap">
+                                            <button type="button" onclick="setOrderTipPercentPreset(5)" class="tip-preset-btn px-2.5 py-1 text-xs font-bold rounded-lg bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-700/60 hover:border-emerald-600 hover:bg-emerald-100 text-slate-800 dark:text-slate-200 transition-all active:scale-95 shadow-xs" data-pct="5">5%</button>
+                                            <button type="button" onclick="setOrderTipPercentPreset(10)" class="tip-preset-btn px-2.5 py-1 text-xs font-bold rounded-lg bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-700/60 hover:border-emerald-600 hover:bg-emerald-100 text-slate-800 dark:text-slate-200 transition-all active:scale-95 shadow-xs" data-pct="10">10%</button>
+                                            <button type="button" onclick="setOrderTipPercentPreset(15)" class="tip-preset-btn px-2.5 py-1 text-xs font-bold rounded-lg bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-700/60 hover:border-emerald-600 hover:bg-emerald-100 text-slate-800 dark:text-slate-200 transition-all active:scale-95 shadow-xs" data-pct="15">15%</button>
+                                            <button type="button" onclick="setOrderTipAmountPreset(5)" class="tip-preset-btn px-2.5 py-1 text-xs font-bold rounded-lg bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-700/60 hover:border-emerald-600 hover:bg-emerald-100 text-slate-800 dark:text-slate-200 transition-all active:scale-95 shadow-xs" data-amt="5">S/ 5.00</button>
+                                            <button type="button" onclick="setOrderTipAmountPreset(10)" class="tip-preset-btn px-2.5 py-1 text-xs font-bold rounded-lg bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-700/60 hover:border-emerald-600 hover:bg-emerald-100 text-slate-800 dark:text-slate-200 transition-all active:scale-95 shadow-xs" data-amt="10">S/ 10.00</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- 2 Inputs sincronizados: Porcentaje y Monto -->
+                                    <div class="grid grid-cols-2 gap-2.5">
+                                        <div>
+                                            <label class="block text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 mb-1">Porcentaje (%)</label>
+                                            <div class="relative">
+                                                <input type="number" id="order-tip-pct-input" step="0.01" min="0" max="100" placeholder="0.00"
+                                                    oninput="onOrderTipPctInput(this.value)" onblur="normalizeOrderTipInputs()"
+                                                    class="w-full pl-3 pr-6 py-1.5 rounded-lg border border-emerald-200 dark:border-emerald-700/60 bg-white dark:bg-gray-800 text-sm font-bold tabular-nums text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                                                <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400 dark:text-gray-500">%</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 mb-1">Monto Propina (S/)</label>
+                                            <div class="relative">
+                                                <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400 dark:text-gray-500">S/</span>
+                                                <input type="number" id="order-tip-amt-input" step="0.01" min="0" placeholder="0.00"
+                                                    oninput="onOrderTipAmtInput(this.value)" onblur="normalizeOrderTipInputs()"
+                                                    class="w-full pl-7 pr-3 py-1.5 rounded-lg border border-emerald-200 dark:border-emerald-700/60 bg-white dark:bg-gray-800 text-sm font-bold tabular-nums text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Resumen detallado de la Propina -->
+                                    <div id="order-tip-summary-box" class="rounded-lg bg-white dark:bg-gray-800 border border-emerald-200 dark:border-emerald-800/50 p-2.5 space-y-1 text-xs">
+                                        <div class="flex justify-between items-center text-slate-500 dark:text-slate-400">
+                                            <span>Subtotal Pedido:</span>
+                                            <span id="order-tip-net-order-total" class="font-semibold tabular-nums text-slate-700 dark:text-slate-300">S/ 0.00</span>
+                                        </div>
+                                        <div class="flex justify-between items-center text-emerald-600 dark:text-emerald-400 font-semibold">
+                                            <span>+ Propina Mozo:</span>
+                                            <span id="order-tip-amount-display" class="tabular-nums">+ S/ 0.00</span>
+                                        </div>
+                                        <div class="border-t border-dashed border-gray-200 dark:border-gray-700 my-1 pt-1 flex justify-between items-center font-bold text-slate-900 dark:text-white text-sm">
+                                            <span>Total a cobrar (c/ propina):</span>
+                                            <span id="order-tip-final-total" class="text-emerald-600 dark:text-emerald-400 text-base tabular-nums">S/ 0.00</span>
                                         </div>
                                     </div>
                                 </div>
@@ -6591,6 +6659,7 @@
                             const dueDateEl = document.getElementById('cobro-due-date');
 
                             const discountMeta = getOrderDiscountMeta(getCobroGrossOrderTotal());
+                            const tipMeta = getOrderTipMeta(getCobroOrderTotal());
                             const paymentPayload = {
                                 movement_id: movementId,
                                 table_id: counterPosMode ? null : (currentTable.table_id ?? currentTable.id),
@@ -6607,6 +6676,7 @@
                                 notes: '',
                                 discount_type: discountMeta.amount > 0 ? discountMeta.type : null,
                                 discount_value: discountMeta.amount > 0 ? (discountMeta.type === 'percentage' ? discountMeta.percentage : discountMeta.amount) : 0,
+                                tip_amount: tipMeta.amount > 0 ? tipMeta.amount : 0,
                             };
                             if (splitPayload) {
                                 paymentPayload.split = splitPayload;
@@ -7150,15 +7220,173 @@
                         updateOrderCobroTotals();
                     }
 
+                    function toggleOrderTipPanel() {
+                        const panel = document.getElementById('order-tip-panel');
+                        if (!panel) return;
+                        const isHidden = panel.classList.contains('hidden');
+                        if (isHidden) {
+                            panel.classList.remove('hidden');
+                        } else {
+                            panel.classList.add('hidden');
+                        }
+                        syncOrderTipUI();
+                    }
+
+                    function getOrderTipMeta(baseTotal) {
+                        const gross = typeof baseTotal === 'number' ? baseTotal : getCobroOrderTotal();
+                        const pctInp = document.getElementById('order-tip-pct-input');
+                        const amtInp = document.getElementById('order-tip-amt-input');
+
+                        let mode = window.__orderTipMode || 'none';
+                        let pct = parseFloat(pctInp?.value || 0) || 0;
+                        let amt = parseFloat(amtInp?.value || 0) || 0;
+
+                        if (mode === 'percent' && pct > 0) {
+                            amt = Math.round((gross * (pct / 100)) * 100) / 100;
+                        } else if (mode === 'amount' && amt > 0) {
+                            pct = gross > 0 ? Math.round(((amt / gross) * 100) * 100) / 100 : 0;
+                        } else if (amt > 0) {
+                            mode = 'amount';
+                            pct = gross > 0 ? Math.round(((amt / gross) * 100) * 100) / 100 : 0;
+                        } else if (pct > 0) {
+                            mode = 'percent';
+                            amt = Math.round((gross * (pct / 100)) * 100) / 100;
+                        } else {
+                            mode = 'none';
+                            amt = 0;
+                            pct = 0;
+                        }
+
+                        const totalWithTip = Math.round((gross + amt) * 100) / 100;
+
+                        return {
+                            mode: mode,
+                            percentage: pct,
+                            amount: amt,
+                            baseTotal: gross,
+                            totalWithTip: totalWithTip
+                        };
+                    }
+
+                    function setOrderTipPercentPreset(pct) {
+                        window.__orderTipMode = 'percent';
+                        const pctInp = document.getElementById('order-tip-pct-input');
+                        const amtInp = document.getElementById('order-tip-amt-input');
+                        if (pctInp) pctInp.value = pct;
+                        if (amtInp) amtInp.value = '';
+                        syncOrderTipUI('order-tip-pct-input');
+                    }
+
+                    function setOrderTipAmountPreset(amt) {
+                        window.__orderTipMode = 'amount';
+                        const pctInp = document.getElementById('order-tip-pct-input');
+                        const amtInp = document.getElementById('order-tip-amt-input');
+                        if (amtInp) amtInp.value = amt;
+                        if (pctInp) pctInp.value = '';
+                        syncOrderTipUI('order-tip-amt-input');
+                    }
+
+                    function onOrderTipPctInput(val) {
+                        window.__orderTipMode = 'percent';
+                        syncOrderTipUI('order-tip-pct-input');
+                    }
+
+                    function onOrderTipAmtInput(val) {
+                        window.__orderTipMode = 'amount';
+                        syncOrderTipUI('order-tip-amt-input');
+                    }
+
+                    function normalizeOrderTipInputs() {
+                        syncOrderTipUI();
+                    }
+
+                    function clearOrderTip() {
+                        window.__orderTipMode = 'none';
+                        const pctInp = document.getElementById('order-tip-pct-input');
+                        const amtInp = document.getElementById('order-tip-amt-input');
+                        if (pctInp) pctInp.value = '';
+                        if (amtInp) amtInp.value = '';
+                        syncOrderTipUI();
+                    }
+
+                    function syncOrderTipUI(activeId) {
+                        const gross = getCobroOrderTotal();
+                        const meta = getOrderTipMeta(gross);
+
+                        const pctInp = document.getElementById('order-tip-pct-input');
+                        const amtInp = document.getElementById('order-tip-amt-input');
+
+                        if (meta.amount > 0) {
+                            if (activeId !== 'order-tip-pct-input' && pctInp && meta.mode === 'amount') {
+                                pctInp.value = meta.percentage > 0 ? meta.percentage.toFixed(2) : '';
+                            }
+                            if (activeId !== 'order-tip-amt-input' && amtInp && meta.mode === 'percent') {
+                                amtInp.value = meta.amount > 0 ? meta.amount.toFixed(2) : '';
+                            }
+                        } else {
+                            if (pctInp && activeId !== 'order-tip-pct-input' && !pctInp.value) pctInp.value = '';
+                            if (amtInp && activeId !== 'order-tip-amt-input' && !amtInp.value) amtInp.value = '';
+                        }
+
+                        document.querySelectorAll('.tip-preset-btn').forEach(btn => {
+                            const presetPct = parseFloat(btn.getAttribute('data-pct') || 0);
+                            const presetAmt = parseFloat(btn.getAttribute('data-amt') || 0);
+                            let isMatch = false;
+                            if (presetPct > 0 && meta.mode === 'percent' && Math.abs(meta.percentage - presetPct) < 0.01) isMatch = true;
+                            if (presetAmt > 0 && meta.mode === 'amount' && Math.abs(meta.amount - presetAmt) < 0.01) isMatch = true;
+
+                            if (isMatch) {
+                                btn.classList.add('bg-emerald-600', 'text-white', 'border-emerald-600');
+                                btn.classList.remove('bg-white', 'dark:bg-slate-800', 'text-slate-800', 'dark:text-slate-200');
+                            } else {
+                                btn.classList.remove('bg-emerald-600', 'text-white', 'border-emerald-600');
+                                btn.classList.add('bg-white', 'dark:bg-slate-800', 'text-slate-800', 'dark:text-slate-200');
+                            }
+                        });
+
+                        const netEl = document.getElementById('order-tip-net-order-total');
+                        const tipEl = document.getElementById('order-tip-amount-display');
+                        const finalEl = document.getElementById('order-tip-final-total');
+
+                        if (netEl) netEl.textContent = 'S/ ' + gross.toFixed(2);
+                        if (tipEl) {
+                            if (meta.amount > 0) {
+                                tipEl.textContent = `+ S/ ${meta.amount.toFixed(2)} (${meta.percentage.toFixed(1)}%)`;
+                            } else {
+                                tipEl.textContent = '+ S/ 0.00';
+                            }
+                        }
+                        if (finalEl) finalEl.textContent = 'S/ ' + meta.totalWithTip.toFixed(2);
+
+                        const badge = document.getElementById('tip-badge');
+                        const btnToggle = document.getElementById('btn-toggle-tip-panel');
+                        if (badge) {
+                            if (meta.amount > 0) {
+                                badge.textContent = `+S/ ${meta.amount.toFixed(2)}`;
+                                badge.classList.remove('hidden');
+                                if (btnToggle) {
+                                    btnToggle.classList.add('border-emerald-600', 'bg-emerald-50', 'dark:bg-emerald-950/40');
+                                }
+                            } else {
+                                badge.classList.add('hidden');
+                                if (btnToggle) {
+                                    btnToggle.classList.remove('border-emerald-600', 'bg-emerald-50', 'dark:bg-emerald-950/40');
+                                }
+                            }
+                        }
+
+                        updateOrderCobroTotals();
+                    }
+
                     function updateOrderCobroTotals() {
                         const list = document.getElementById('cobro-payment-methods-list');
                         if (list) {
                             const rows = list.querySelectorAll('.cobro-pm-row');
-                            const netTotal = getCobroOrderTotal();
+                            const totalToPay = getCobroTotalToPay();
                             if (rows.length === 1) {
                                 const amtInput = rows[0].querySelector('.cobro-pm-amount');
                                 if (amtInput) {
-                                    amtInput.value = netTotal.toFixed(2);
+                                    amtInput.value = totalToPay.toFixed(2);
                                 }
                             }
                         }
@@ -7172,7 +7400,7 @@
                     }
 
                     function getCobroRemainingAmount(excludeInput) {
-                        const orderTotal = getCobroOrderTotal();
+                        const orderTotal = getCobroTotalToPay();
                         const inputs = document.querySelectorAll('.cobro-pm-amount');
                         let paid = 0;
                         inputs.forEach(inp => {
@@ -7200,7 +7428,9 @@
                     }
 
                     function getCobroTotalToPay() {
-                        return getCobroOrderTotal();
+                        const gross = getCobroOrderTotal();
+                        const tipMeta = getOrderTipMeta(gross);
+                        return tipMeta.totalWithTip;
                     }
 
                     function calcularVuelto() {
@@ -7713,6 +7943,15 @@
                     window.clearOrderDiscount = clearOrderDiscount;
                     window.syncOrderDiscountUI = syncOrderDiscountUI;
                     window.getOrderDiscountMeta = getOrderDiscountMeta;
+                    window.toggleOrderTipPanel = toggleOrderTipPanel;
+                    window.setOrderTipPercentPreset = setOrderTipPercentPreset;
+                    window.setOrderTipAmountPreset = setOrderTipAmountPreset;
+                    window.onOrderTipPctInput = onOrderTipPctInput;
+                    window.onOrderTipAmtInput = onOrderTipAmtInput;
+                    window.normalizeOrderTipInputs = normalizeOrderTipInputs;
+                    window.clearOrderTip = clearOrderTip;
+                    window.syncOrderTipUI = syncOrderTipUI;
+                    window.getOrderTipMeta = getOrderTipMeta;
                     window.getCobroGrossOrderTotal = getCobroGrossOrderTotal;
                     window.clearHeaderClientName = clearHeaderClientName;
                     window.updateHeaderClientName = updateHeaderClientName;

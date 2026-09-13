@@ -27,6 +27,7 @@ class ShiftCashClosePdfService
         'discounts_by_person',
         'courtesies',
         'debts_sales_summary',
+        'tips_summary',
     ];
 
     /**
@@ -56,6 +57,7 @@ class ShiftCashClosePdfService
         $discountsByProduct = $this->filterDiscountLines($salesDetails);
         $discountsByPerson = $this->aggregateDiscountsByPerson($saleMovements);
         $courtesies = $this->filterCourtesyLines($salesDetails);
+        $tipsSummary = $this->aggregateTipsByWaiter($saleMovements);
 
         $debtsSales = $this->queryDebtSalesInWindow($branchId, $window['from'], $window['to']);
         $debtsSummary = [
@@ -130,6 +132,7 @@ class ShiftCashClosePdfService
                 'egresos' => $egresosTotal,
                 'neto' => $neto,
             ],
+            'tips_summary' => $tipsSummary,
             'options' => $options,
         ];
     }
@@ -524,5 +527,51 @@ class ShiftCashClosePdfService
         }
 
         return $out;
+    }
+
+    /**
+     * @param  Collection<int, SalesMovement>  $saleMovements
+     * @return array{total: float, count: int, by_waiter: array<int, array{waiter: string, count: int, total: float}>}
+     */
+    public function aggregateTipsByWaiter(Collection $saleMovements): array
+    {
+        $byWaiter = [];
+        $totalTips = 0.0;
+        $totalCount = 0;
+
+        foreach ($saleMovements as $sm) {
+            $tipAmt = (float) ($sm->tip_amount ?? 0);
+            if ($tipAmt <= 0.009) {
+                continue;
+            }
+
+            $totalTips += $tipAmt;
+            $totalCount++;
+
+            $waiterName = $sm->movement?->responsible_name
+                ?: ($sm->movement?->user_name
+                    ?: 'Mozo / Responsable');
+
+            if (!isset($byWaiter[$waiterName])) {
+                $byWaiter[$waiterName] = [
+                    'waiter' => $waiterName,
+                    'count' => 0,
+                    'total' => 0.0,
+                ];
+            }
+
+            $byWaiter[$waiterName]['count'] += 1;
+            $byWaiter[$waiterName]['total'] += $tipAmt;
+        }
+
+        foreach ($byWaiter as $k => $v) {
+            $byWaiter[$k]['total'] = round($v['total'], 2);
+        }
+
+        return [
+            'total' => round($totalTips, 2),
+            'count' => $totalCount,
+            'by_waiter' => array_values($byWaiter),
+        ];
     }
 }
