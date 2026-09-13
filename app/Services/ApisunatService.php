@@ -504,25 +504,34 @@ class ApisunatService
             }
 
             $maxLinkedNumber = 0;
-            foreach ($movements as $m) {
-                if ($m->electronic_invoice_external_id) {
+            $updatedMovements = Movement::where('branch_id', $branch->id)
+                ->where('movement_type_id', 2)
+                ->where('document_type_id', $documentType->id)
+                ->get();
+
+            $emittedIds = [];
+            foreach ($updatedMovements as $m) {
+                $extId = trim((string) $m->electronic_invoice_external_id);
+                $status = strtoupper(trim((string) $m->electronic_invoice_status));
+                if ($extId !== '' && $extId !== '0' && $status === 'SENT') {
+                    $emittedIds[] = $m->id;
                     $num = $this->normalizeCorrelative($m->number);
-                    if ($num > $maxLinkedNumber) {
+                    if ($num > $maxLinkedNumber && $num < 100000) {
                         $maxLinkedNumber = $num;
                     }
                 }
             }
+
             $startSequence = max($next, $maxLinkedNumber + 1);
 
             $pending = Movement::with('salesMovement')
                 ->where('branch_id', $branch->id)
                 ->where('movement_type_id', 2)
                 ->where('document_type_id', $documentType->id)
-                ->where(function ($query) {
-                    $query->whereNull('electronic_invoice_external_id')
-                        ->orWhere('electronic_invoice_status', '!=', 'SENT');
-                })
-                ->orderBy('moved_at')->orderBy('id')->get();
+                ->whereNotIn('id', $emittedIds ?: [0])
+                ->orderBy('moved_at', 'asc')
+                ->orderBy('id', 'asc')
+                ->get();
 
             DB::transaction(function () use ($pending, $startSequence, $series) {
                 $sequence = $startSequence;
