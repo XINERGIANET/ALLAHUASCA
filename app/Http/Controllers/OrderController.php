@@ -778,10 +778,7 @@ class OrderController extends Controller
                     $isSameUser = true;
                 }
 
-                $assignedUserObj = $assignedUserId > 0 ? User::find($assignedUserId) : ($assignedResponsibleId > 0 ? User::find($assignedResponsibleId) : null);
-                $assignedIsMozo = $assignedUserObj ? Profile::userHasMozoProfile($assignedUserObj->profile_id) : true;
-
-                $hideForMozo = ! $isSameUser && $assignedIsMozo;
+                $hideForMozo = ! $isSameUser;
             }
 
             $productsText = '';
@@ -1104,11 +1101,8 @@ class OrderController extends Controller
                 }
             }
 
-            $assignedUserObj = $assignedUserId > 0 ? User::find($assignedUserId) : ($assignedResponsibleId > 0 ? User::find($assignedResponsibleId) : null);
-            $assignedIsMozo = $assignedUserObj ? Profile::userHasMozoProfile($assignedUserObj->profile_id) : true;
-
             // Si el perfil es Mozo, debemos ocultarle mesas ocupadas por OTRO mozo
-            $hideForMozo = $isMozo && $situation === 'ocupada' && $isOccupiedByOther && $assignedIsMozo;
+            $hideForMozo = $isMozo && $situation === 'ocupada' && $isOccupiedByOther;
 
             $productsText = '';
             if ($orderMovement && $orderMovement->relationLoaded('details') && $orderMovement->details->isNotEmpty()) {
@@ -1257,12 +1251,8 @@ class OrderController extends Controller
                        || ($currentUserName !== '' && $assignedWaiterName !== '' && strcasecmp($currentUserName, $assignedWaiterName) === 0);
 
             if ($isMozo && ! $isSameUser && ($assignedUserId > 0 || $assignedWaiterId > 0)) {
-                $assignedUserObj = $assignedUserId > 0 ? User::find($assignedUserId) : null;
-                $assignedIsMozo = $assignedUserObj ? Profile::userHasMozoProfile($assignedUserObj->profile_id) : true;
-                if ($assignedIsMozo) {
-                    $waiterName = $assignedWaiterName ?: 'otro mozo';
-                    return redirect()->route('orders.index')->with('error', "La Mesa {$table->name} ya está siendo atendida por {$waiterName}.");
-                }
+                $waiterName = $assignedWaiterName ?: 'otro mozo';
+                return redirect()->route('orders.index')->with('error', "La Mesa {$table->name} ya está siendo atendida por {$waiterName}.");
             }
         }
 
