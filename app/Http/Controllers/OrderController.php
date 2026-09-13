@@ -778,7 +778,10 @@ class OrderController extends Controller
                     $isSameUser = true;
                 }
 
-                $hideForMozo = ! $isSameUser;
+                $assignedUserObj = $assignedUserId > 0 ? User::find($assignedUserId) : ($assignedResponsibleId > 0 ? User::find($assignedResponsibleId) : null);
+                $assignedIsMozo = $assignedUserObj ? Profile::userHasMozoProfile($assignedUserObj->profile_id) : true;
+
+                $hideForMozo = ! $isSameUser && $assignedIsMozo;
             }
 
             $productsText = '';
@@ -1101,8 +1104,11 @@ class OrderController extends Controller
                 }
             }
 
+            $assignedUserObj = $assignedUserId > 0 ? User::find($assignedUserId) : ($assignedResponsibleId > 0 ? User::find($assignedResponsibleId) : null);
+            $assignedIsMozo = $assignedUserObj ? Profile::userHasMozoProfile($assignedUserObj->profile_id) : true;
+
             // Si el perfil es Mozo, debemos ocultarle mesas ocupadas por OTRO mozo
-            $hideForMozo = $isMozo && $situation === 'ocupada' && $isOccupiedByOther;
+            $hideForMozo = $isMozo && $situation === 'ocupada' && $isOccupiedByOther && $assignedIsMozo;
 
             $productsText = '';
             if ($orderMovement && $orderMovement->relationLoaded('details') && $orderMovement->details->isNotEmpty()) {
@@ -1172,16 +1178,19 @@ class OrderController extends Controller
             return response()->json(['success' => false, 'message' => 'Mesa requerida.'], 400);
         }
 
-        $currentUserId = (int) (session('user_id') ?: auth()->id());
-        $currentPersonId = (int) (session('person_id') ?: auth()->user()?->person_id);
-        $currentUserName = trim((string) (auth()->user()?->name ?? session('user_name') ?? 'Mozo'));
+        $isMozo = current_user_is_mozo();
+        if ($isMozo) {
+            $currentUserId = (int) (session('user_id') ?: auth()->id());
+            $currentPersonId = (int) (session('person_id') ?: auth()->user()?->person_id);
+            $currentUserName = trim((string) (auth()->user()?->name ?? session('user_name') ?? 'Mozo'));
 
-        \Illuminate\Support\Facades\Cache::put("table_draft_lock:{$tableId}", [
-            'user_id' => $currentUserId,
-            'person_id' => $currentPersonId,
-            'user_name' => $currentUserName,
-            'locked_at' => time(),
-        ], 7);
+            \Illuminate\Support\Facades\Cache::put("table_draft_lock:{$tableId}", [
+                'user_id' => $currentUserId,
+                'person_id' => $currentPersonId,
+                'user_name' => $currentUserName,
+                'locked_at' => time(),
+            ], 7);
+        }
 
         return response()->json(['success' => true]);
     }
@@ -1189,7 +1198,8 @@ class OrderController extends Controller
     public function releaseTableLock(Request $request)
     {
         $tableId = (int) $request->input('table_id');
-        if ($tableId > 0) {
+        $isMozo = current_user_is_mozo();
+        if ($tableId > 0 && $isMozo) {
             \Illuminate\Support\Facades\Cache::forget("table_draft_lock:{$tableId}");
 
             // Si el mozo salió por equivocación sin guardar productos, asegurar que la mesa quede 'libre'
@@ -1247,8 +1257,12 @@ class OrderController extends Controller
                        || ($currentUserName !== '' && $assignedWaiterName !== '' && strcasecmp($currentUserName, $assignedWaiterName) === 0);
 
             if ($isMozo && ! $isSameUser && ($assignedUserId > 0 || $assignedWaiterId > 0)) {
-                $waiterName = $assignedWaiterName ?: 'otro mozo';
-                return redirect()->route('orders.index')->with('error', "La Mesa {$table->name} ya está siendo atendida por {$waiterName}.");
+                $assignedUserObj = $assignedUserId > 0 ? User::find($assignedUserId) : null;
+                $assignedIsMozo = $assignedUserObj ? Profile::userHasMozoProfile($assignedUserObj->profile_id) : true;
+                if ($assignedIsMozo) {
+                    $waiterName = $assignedWaiterName ?: 'otro mozo';
+                    return redirect()->route('orders.index')->with('error', "La Mesa {$table->name} ya está siendo atendida por {$waiterName}.");
+                }
             }
         }
 
@@ -1263,7 +1277,11 @@ class OrderController extends Controller
             $isSameUser = ($currentUserId > 0 && $lockUser === $currentUserId)
                        || ($currentPersonId > 0 && $lockPerson === $currentPersonId)
                        || ($currentUserName !== '' && $lockUserName !== '' && strcasecmp($currentUserName, $lockUserName) === 0);
-            if (! $isSameUser) {
+
+            $lockUserObj = $lockUser > 0 ? User::find($lockUser) : null;
+            $lockIsMozo = $lockUserObj ? Profile::userHasMozoProfile($lockUserObj->profile_id) : true;
+
+            if (! $isSameUser && $lockIsMozo) {
                 $lockName = $lockUserName ?: 'otro mozo';
                 return redirect()->route('orders.index')->with('error', "La Mesa {$table->name} está siendo tomada en este momento por {$lockName}.");
             }
@@ -1271,13 +1289,15 @@ class OrderController extends Controller
             \Illuminate\Support\Facades\Cache::forget("table_draft_lock:{$table->id}");
         }
 
-        // 3. Registrar el bloqueo temporal a favor del mozo actual (7s TTL, renovado cada 3s por heartbeat)
-        \Illuminate\Support\Facades\Cache::put("table_draft_lock:{$table->id}", [
-            'user_id' => $currentUserId,
-            'person_id' => $currentPersonId,
-            'user_name' => $currentUserName,
-            'locked_at' => time(),
-        ], 7);
+        // 3. Registrar el bloqueo temporal SOLO a favor de perfiles Mozo (los administradores no bloquean mesas)
+        if ($isMozo) {
+            \Illuminate\Support\Facades\Cache::put("table_draft_lock:{$table->id}", [
+                'user_id' => $currentUserId,
+                'person_id' => $currentPersonId,
+                'user_name' => $currentUserName,
+                'locked_at' => time(),
+            ], 7);
+        }
 
         $area = $table->area;
         if (! $area && $request->has('area_id')) {
@@ -2580,15 +2600,26 @@ class OrderController extends Controller
                     'delivery_time' => $request->filled('delivery_time') ? $request->delivery_time : null,
                 ]);
 
+                $finalResponsibleId = $responsibleId;
+                $finalResponsibleName = $waiterName ?: (($user?->person?->first_name ?? '') . ' ' . ($user?->person?->last_name ?? '-'));
+
+                // Si el usuario actual es un Administrador/Cajero (no Mozo) y NO seleccionó explícitamente un mozo distinto en el formulario,
+                // conservar el mozo responsable original del pedido para que la mesa siga perteneciendo al mozo asignado.
+                if (! $isMozoProfile && ! $request->filled('waiter_id') && ! $request->session()->has('waiter_person_id')) {
+                    if ($existingOrderMovement->movement?->responsible_id) {
+                        $finalResponsibleId = $existingOrderMovement->movement->responsible_id;
+                        $finalResponsibleName = $existingOrderMovement->movement->responsible_name ?: $finalResponsibleName;
+                    }
+                }
+
                 $existingOrderMovement->movement?->update([
                     'moved_at' => now(),
                     'user_id' => $user?->id,
                     'user_name' => $user?->name ?? 'Sistema',
                     'person_id' => $clientPerson?->id,
                     'person_name' => $clientName,
-                    'responsible_id' => $responsibleId,
-
-                    'responsible_name' => $waiterName ?: (($user?->person?->first_name ?? '') . ' ' . ($user?->person?->last_name ?? '-')),
+                    'responsible_id' => $finalResponsibleId,
+                    'responsible_name' => $finalResponsibleName,
                 ]);
 
                 // Eliminar detalles antiguos ACTIVOS y crear los nuevos (mantener histórico de cancelaciones status='C')
