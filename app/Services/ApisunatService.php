@@ -150,15 +150,29 @@ class ApisunatService
             'serie' => $catalog['serie'],
         ]);
 
-        // La numeracion remota es la fuente de verdad. suggestedNumber ya es
-        // el siguiente libre; si no viene, lastNumber + 1 cumple lo mismo.
+        // La numeracion remota combinada con el máximo emitido localmente es la fuente de verdad.
         $suggested = $this->normalizeCorrelative(data_get($correlativeResp->json(), 'suggestedNumber', 0));
         $last = $this->normalizeCorrelative(data_get($correlativeResp->json(), 'lastNumber', 0));
         $targetNum = $suggested > 0 ? $suggested : ($last > 0 ? $last + 1 : 1);
 
-        if ($correlativeResp->failed() || $targetNum <= 0 || $targetNum > 99999999) {
-            throw new \RuntimeException('No se pudo obtener un correlativo valido de APISUNAT. No se envio el comprobante para evitar huecos.');
+        $maxEmittedLocal = 0;
+        $emittedLocalSales = Movement::where('branch_id', $branch->id)
+            ->where('movement_type_id', 2)
+            ->where('document_type_id', $sale->document_type_id)
+            ->where('electronic_invoice_status', 'SENT')
+            ->whereNotNull('electronic_invoice_external_id')
+            ->where('electronic_invoice_external_id', '!=', '')
+            ->where('electronic_invoice_external_id', '!=', '0')
+            ->get();
+
+        foreach ($emittedLocalSales as $emitted) {
+            $num = $this->normalizeCorrelative($emitted->number);
+            if ($num > $maxEmittedLocal && $num < 100000) {
+                $maxEmittedLocal = $num;
+            }
         }
+
+        $targetNum = max($targetNum, $maxEmittedLocal + 1);
 
         $attempts = 0;
         $sendResp = null;
@@ -169,15 +183,6 @@ class ApisunatService
         while ($attempts < 25) {
             $attempts++;
             $number = str_pad((string) $targetNum, 8, '0', STR_PAD_LEFT);
-            $sale->number = $number;
-            $sale->electronic_invoice_series = $catalog['serie'];
-            $sale->electronic_invoice_number = $catalog['serie'].'-'.$number;
-            $sale->save();
-            if ($sale->salesMovement) {
-                $sale->salesMovement->series = preg_replace('/^[A-Z]+/i', '', $catalog['serie']);
-                $sale->salesMovement->save();
-            }
-
             $fileName = trim((string) ($branch?->ruc ?? '0')).'-'.$catalog['type'].'-'.$catalog['serie'].'-'.$number;
             $documentBody = $this->buildDocumentBody($sale, $catalog, $customerDocument, $customerDocType, $totals, $number);
             $this->validateDocumentBodyForSunat($documentBody);
@@ -266,6 +271,7 @@ class ApisunatService
         $sale->electronic_invoice_pdf_a4_url = $apiUrl.'/documents/'.$documentId.'/getPDF/A4/'.$fileName.'.pdf';
         $sale->electronic_invoice_xml_url = $urls['xml_url'] ?? null;
         $sale->electronic_invoice_cdr_url = $urls['cdr_url'] ?? null;
+        $sale->electronic_invoice_status = 'SENT';
         $sale->electronic_invoice_response = (array) $result;
         $sale->save();
 
