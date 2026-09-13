@@ -524,6 +524,11 @@
                             <i class="ri-cloud-line text-base"></i>
                             <span>Sincronizar APISUNAT</span>
                         </button>
+                        <button type="button" onclick="enviarLoteApisunat()"
+                            class="inline-flex h-11 items-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 transition">
+                            <i class="ri-cloud-upload-line text-base"></i>
+                            <span>Enviar Pendientes a APISUNAT</span>
+                        </button>
                     </div>
                 </form>
             </div>
@@ -578,7 +583,12 @@
                                         @php
                                             $displayNumber = trim((string) ($sale->electronic_invoice_number ?? ''));
                                             if ($displayNumber === '') {
-                                                $displayNumber = strtoupper(substr($sale->documentType->name, 0, 1)) . ($sale->salesMovement->series ?? '') . '-' . $sale->number;
+                                                $cleanCorrelative = app(\App\Services\ApisunatService::class)->normalizeCorrelative($sale->number);
+                                                $paddedCorrelative = str_pad((string) $cleanCorrelative, 8, '0', STR_PAD_LEFT);
+                                                $docNameLower = mb_strtolower(trim((string) ($sale->documentType?->name ?? '')), 'UTF-8');
+                                                $seriesPrefix = $sale->electronic_invoice_series
+                                                    ?: ($sale->salesMovement->series ?? (str_contains($docNameLower, 'factura') ? 'F001' : 'B001'));
+                                                $displayNumber = $seriesPrefix . '-' . $paddedCorrelative;
                                             }
                                         @endphp
                                         <p class="font-bold text-gray-800 text-theme-sm dark:text-white/90">
@@ -1465,6 +1475,24 @@
                 })
                 .then(res => res.json())
                 .then(data => { alert(data.message); if (data.success) window.location.reload(); });
+            }
+
+            function enviarLoteApisunat() {
+                if (!confirm("¿Desea enviar todas las ventas pendientes a APISUNAT? Las fechas antiguas de hace más de 2 días se enviarán automáticamente con la fecha máxima permitida por SUNAT (últimos 2 días) para que no sean rechazadas.")) return;
+                const token = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}';
+                fetch("{{ route('sales.batch.sunat') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': token, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    alert(data.message);
+                    if (data.success || (data.emitted_count && data.emitted_count > 0)) window.location.reload();
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('Error de conexión al procesar el envío masivo.');
+                });
             }
 
             function reorganizarCorrelativos() {
