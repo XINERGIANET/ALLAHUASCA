@@ -585,9 +585,19 @@
                                             if ($displayNumber === '') {
                                                 $cleanCorrelative = app(\App\Services\ApisunatService::class)->normalizeCorrelative($sale->number);
                                                 $paddedCorrelative = str_pad((string) $cleanCorrelative, 8, '0', STR_PAD_LEFT);
-                                                $docNameLower = mb_strtolower(trim((string) ($sale->documentType?->name ?? '')), 'UTF-8');
-                                                $seriesPrefix = $sale->electronic_invoice_series
-                                                    ?: ($sale->salesMovement->series ?? (str_contains($docNameLower, 'factura') ? 'F001' : 'B001'));
+                                                if (!empty($sale->electronic_invoice_series)) {
+                                                    $seriesPrefix = $sale->electronic_invoice_series;
+                                                } else {
+                                                    $docName = $sale->documentType?->name ?? '';
+                                                    $letter = strtoupper(substr(trim($docName), 0, 1)) ?: 'B';
+                                                    $rawSeries = trim((string) ($sale->salesMovement?->series ?? '001'));
+                                                    if ($rawSeries === '') {
+                                                        $rawSeries = '001';
+                                                    }
+                                                    $seriesPrefix = preg_match('/^[A-Za-z]/', $rawSeries)
+                                                        ? strtoupper($rawSeries)
+                                                        : $letter . str_pad($rawSeries, 3, '0', STR_PAD_LEFT);
+                                                }
                                                 $displayNumber = $seriesPrefix . '-' . $paddedCorrelative;
                                             }
                                         @endphp
