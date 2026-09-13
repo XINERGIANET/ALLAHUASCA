@@ -7,19 +7,24 @@
         * { box-sizing: border-box; }
         body { font-family: "Segoe UI", Arial, sans-serif; font-size: 12px; margin: 0; padding: 16px; color: #111827; }
         h1 { font-size: 25px; margin: 0 0 8px; text-align: center; }
-        h2 { font-size: 20px; margin: 16px 0 8px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 14px; }
-        th, td { padding: 4px 6px; border-bottom: 1px solid #e5e7eb; text-align: left; }
-        th { background: #f3f4f6; font-size: 11px; text-transform: uppercase; }
+        h2 { font-size: 18px; margin: 16px 0 8px; page-break-after: avoid; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; page-break-inside: auto; }
+        thead { display: table-header-group; }
+        tbody { display: table-row-group; }
+        tr { page-break-inside: avoid; page-break-after: auto; }
+        thead tr { page-break-inside: avoid; page-break-after: avoid; }
+        th, td { padding: 5px 6px; border-bottom: 1px solid #e5e7eb; text-align: left; vertical-align: middle; }
+        th { background: #f3f4f6; font-size: 11px; text-transform: uppercase; line-height: 1.3; font-weight: 700; }
         .text-right { text-align: right; }
         .text-center { text-align: center; }
         .muted { color: #6b7280; }
-        .badge { display: inline-block; padding: 2px 6px; border-radius: 9999px; font-size: 12px; }
+        .badge { display: inline-block; padding: 2px 6px; border-radius: 9999px; font-size: 11px; font-weight: 600; }
         .badge-success { background: #dcfce7; color: #166534; }
         .badge-danger { background: #fee2e2; color: #b91c1c; }
-        .section { margin-bottom: 16px; page-break-inside: avoid; }
+        .section { margin-bottom: 16px; page-break-inside: auto; }
+        .section-avoid { margin-bottom: 16px; page-break-inside: avoid; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .report-header { text-align: center; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 2px solid #111827; }
+        .report-header { text-align: center; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 2px solid #111827; page-break-inside: avoid; }
         .report-logo { display: block; max-width: 315px; max-height: 210px; margin: 0 auto 8px; object-fit: contain; }
         .report-header h1 { color: #111827; }
         @media print {
@@ -90,7 +95,7 @@
         </p>
     </div>
 
-    <div class="section grid-2">
+    <div class="section section-avoid grid-2">
         <div>
             <h2>Apertura</h2>
             <table>
