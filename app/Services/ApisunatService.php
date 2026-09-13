@@ -384,14 +384,20 @@ class ApisunatService
             $name = mb_strtolower((string) $documentType->name, 'UTF-8');
             $type = str_contains($name, 'factura') ? '01' : '03';
             $series = trim((string) ($type === '01' ? $config->series_factura : $config->series_boleta));
-            $remoteDocuments = $this->fetchAllDocuments($branch, $type, $series);
-            $next = $this->fetchLastDocumentNumber($branch, $type);
 
-            if ($next <= 0) {
-                throw new \RuntimeException("APISUNAT no devolvio el siguiente correlativo para {$series}.");
+            $typeProblems = [];
+            $remoteDocuments = [];
+            try {
+                $remoteDocuments = $this->fetchAllDocuments($branch, $type, $series);
+            } catch (\Throwable $e) {
+                $typeProblems[] = "Aviso al consultar APISUNAT ({$series}): " . $e->getMessage();
             }
-            if ($next > 1 && $remoteDocuments === []) {
-                throw new \RuntimeException("APISUNAT reporta correlativos usados para {$series}, pero no devolvio su listado.");
+
+            $next = 0;
+            try {
+                $next = $this->fetchLastDocumentNumber($branch, $type);
+            } catch (\Throwable $e) {
+                // Se usará el número local más alto como base
             }
 
             $movements = Movement::with('salesMovement')
@@ -401,7 +407,6 @@ class ApisunatService
                 ->orderBy('moved_at')->orderBy('id')->get();
             $linked = 0;
             $seenRemote = [];
-            $typeProblems = [];
 
             DB::transaction(function () use ($remoteDocuments, $movements, $branch, $config, $type, $series, &$linked, &$seenRemote, &$typeProblems) {
                 foreach ($remoteDocuments as $document) {
