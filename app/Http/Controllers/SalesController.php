@@ -3874,84 +3874,24 @@ class SalesController extends Controller
      */
     public function reorganizeCorrelatives(Request $request, ApisunatService $apisunatService)
     {
-        $branchId = session('branch_id');
-        $branch = $branchId ? Branch::find($branchId) : null;
-        if (! $branch) {
-            return response()->json(['success' => false, 'message' => 'No se encontró la sucursal activa.'], 422);
-        }
-
-        $summary = [];
-
-        DB::transaction(function () use ($branch, &$summary) {
-            $documentTypeIds = Movement::query()
-                ->where('branch_id', $branch->id)
-                ->where('movement_type_id', 2)
-                ->distinct()
-                ->pluck('document_type_id');
-
-            foreach ($documentTypeIds as $docTypeId) {
-                $docType = DocumentType::find($docTypeId);
-
-                // 1. Obtener todos los correlativos de comprobantes YA EMITIDOS a SUNAT en la BD local
-                $emittedNumbers = Movement::query()
-                    ->where('branch_id', $branch->id)
-                    ->where('movement_type_id', 2)
-                    ->where('document_type_id', $docTypeId)
-                    ->where(function ($q) {
-                        $q->whereNotNull('electronic_invoice_external_id')
-                            ->orWhereNotNull('electronic_invoice_number');
-                    })
-                    ->pluck('number')
-                    ->map(fn ($n) => (int) preg_replace('/\D+/', '', (string) $n))
-                    ->filter(fn ($n) => $n > 0)
-                    ->toArray();
-
-                $usedSet = array_flip($emittedNumbers);
-
-                // 2. Obtener todas las ventas NO EMITIDAS a SUNAT en orden cronológico (moved_at ASC, id ASC)
-                $unemittedMovements = Movement::query()
-                    ->where('branch_id', $branch->id)
-                    ->where('movement_type_id', 2)
-                    ->where('document_type_id', $docTypeId)
-                    ->whereNull('electronic_invoice_external_id')
-                    ->whereNull('electronic_invoice_number')
-                    ->orderBy('moved_at', 'asc')
-                    ->orderBy('created_at', 'asc')
-                    ->orderBy('id', 'asc')
-                    ->get();
-
-                $candidate = 1;
-                $reorderedCount = 0;
-                $assignedNumbers = [];
-
-                foreach ($unemittedMovements as $m) {
-                    // Buscar el primer número disponible que NO esté ocupado por un comprobante emitido a SUNAT
-                    while (isset($usedSet[$candidate])) {
-                        $candidate++;
-                    }
-
-                    $padNum = str_pad((string) $candidate, 8, '0', STR_PAD_LEFT);
-                    if ($m->number !== $padNum) {
-                        $m->number = $padNum;
-                        $m->save();
-                        $reorderedCount++;
-                    }
-
-                    $assignedNumbers[] = $candidate;
-                    $usedSet[$candidate] = true;
-                    $candidate++;
-                }
-
-                $minAssigned = ! empty($assignedNumbers) ? min($assignedNumbers) : 0;
-                $maxAssigned = ! empty($assignedNumbers) ? max($assignedNumbers) : 0;
-                $minPad = str_pad((string) $minAssigned, 8, '0', STR_PAD_LEFT);
-                $maxPad = str_pad((string) $maxAssigned, 8, '0', STR_PAD_LEFT);
-
-                $summary[] = "{$docType?->name}: {$reorderedCount} comprobantes reorganizados rellenando huecos (Rango asignado: {$minPad} a {$maxPad})";
+        try {
+            $branchId = (int) session('branch_id');
+            $branch = $branchId ? Branch::find($branchId) : null;
+            if (! $branch) {
+                return response()->json(['success' => false, 'message' => 'No se encontró sucursal activa.'], 422);
             }
-        });
 
-        return response()->json(['success' => true, 'message' => 'Reorganización sin huecos realizada con éxito: ' . implode(' | ', $summary)]);
+            if (! $apisunatService->isConfiguredForBranch($branch)) {
+                return response()->json(['success' => false, 'message' => 'La sucursal no tiene facturación electrónica configurada.'], 422);
+            }
+
+            return response()->json($apisunatService->reconcileBranchDocuments($branch));
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al reorganizar correlativos: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     private function buildEscPosSaleTicketPayload(Movement $sale, Request $request, ?PrinterBranch $printer = null): string
@@ -4222,29 +4162,6 @@ class SalesController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al sincronizar con APISUNAT: ' . $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    public function reorganizeCorrelatives(Request $request)
-    {
-        try {
-            $branchId = (int) session('branch_id');
-            $branch = $branchId ? Branch::find($branchId) : null;
-            if (! $branch) {
-                return response()->json(['success' => false, 'message' => 'No se encontró sucursal activa.'], 422);
-            }
-
-            $apisunatService = app(ApisunatService::class);
-            if (! $apisunatService->isConfiguredForBranch($branch)) {
-                return response()->json(['success' => false, 'message' => 'La sucursal no tiene facturación electrónica configurada.'], 422);
-            }
-
-            return response()->json($apisunatService->reconcileBranchDocuments($branch));
-        } catch (\Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al reorganizar correlativos: ' . $e->getMessage(),
             ], 500);
         }
     }
