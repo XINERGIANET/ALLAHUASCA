@@ -4225,4 +4225,27 @@ class SalesController extends Controller
             ], 500);
         }
     }
+
+    public function reorganizeCorrelatives(Request $request)
+    {
+        try {
+            $branchId = (int) session('branch_id');
+            $branch = $branchId ? Branch::find($branchId) : null;
+            if (! $branch) {
+                return response()->json(['success' => false, 'message' => 'No se encontró sucursal activa.'], 422);
+            }
+
+            $apisunatService = app(ApisunatService::class);
+            if (! $apisunatService->isConfiguredForBranch($branch)) {
+                return response()->json(['success' => false, 'message' => 'La sucursal no tiene facturación electrónica configurada.'], 422);
+            }
+
+            return response()->json($apisunatService->reconcileBranchDocuments($branch));
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al reorganizar correlativos: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 }

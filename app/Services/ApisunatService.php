@@ -487,18 +487,31 @@ class ApisunatService
 
             if ($typeProblems !== []) {
                 $problems = array_merge($problems, $typeProblems);
-                $summary[] = "{$series}: {$linked} enlazados; pendientes sin reordenar por seguridad";
-                continue;
             }
+
+            $maxLinkedNumber = 0;
+            foreach ($movements as $m) {
+                if ($m->electronic_invoice_external_id) {
+                    $num = $this->normalizeCorrelative($m->number);
+                    if ($num > $maxLinkedNumber) {
+                        $maxLinkedNumber = $num;
+                    }
+                }
+            }
+            $startSequence = max($next, $maxLinkedNumber + 1);
 
             $pending = Movement::with('salesMovement')
                 ->where('branch_id', $branch->id)
                 ->where('movement_type_id', 2)
                 ->where('document_type_id', $documentType->id)
-                ->whereNull('electronic_invoice_external_id')
+                ->where(function ($query) {
+                    $query->whereNull('electronic_invoice_external_id')
+                        ->orWhere('electronic_invoice_status', '!=', 'SENT');
+                })
                 ->orderBy('moved_at')->orderBy('id')->get();
-            DB::transaction(function () use ($pending, $next, $series) {
-                $sequence = $next;
+
+            DB::transaction(function () use ($pending, $startSequence, $series) {
+                $sequence = $startSequence;
                 foreach ($pending as $movement) {
                     $movement->forceFill([
                         'number' => str_pad((string) $sequence, 8, '0', STR_PAD_LEFT),
@@ -509,7 +522,7 @@ class ApisunatService
                     $sequence++;
                 }
             });
-            $summary[] = "{$series}: {$linked} enlazados; {$pending->count()} pendientes desde ".str_pad((string) $next, 8, '0', STR_PAD_LEFT);
+            $summary[] = "{$series}: {$linked} enlazados; {$pending->count()} pendientes reordenados desde ".str_pad((string) $startSequence, 8, '0', STR_PAD_LEFT);
         }
 
         return [

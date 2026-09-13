@@ -524,6 +524,11 @@
                             <i class="ri-cloud-line text-base"></i>
                             <span>Sincronizar APISUNAT</span>
                         </button>
+                        <button type="button" onclick="reorganizarCorrelativos()"
+                            class="inline-flex h-11 items-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 transition">
+                            <i class="ri-sort-asc text-base"></i>
+                            <span>Reordenar Correlativos</span>
+                        </button>
                         <button type="button" onclick="enviarLoteApisunat()"
                             class="inline-flex h-11 items-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 transition">
                             <i class="ri-cloud-upload-line text-base"></i>
