@@ -2926,7 +2926,7 @@ class SalesController extends Controller
             ];
         }
 
-        $discountType = $discountType === 'percent' ? 'percent' : 'amount';
+        $discountType = in_array($discountType, ['percent', 'percentage']) ? 'percent' : 'amount';
         $discountValue = max(0.0, $discountValue);
         $discountAmount = $discountType === 'percent'
             ? round($grossTotal * min(100.0, $discountValue) / 100, 2)

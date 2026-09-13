@@ -594,8 +594,8 @@
                                             placeholder="Escribe el detalle que saldra en el comprobante">
                                     </div>
                                 </div>
-                                @if (!empty($split_account_enabled))
-                                    <div class="flex flex-wrap items-center gap-2 mb-3">
+                                <div class="flex flex-wrap items-center gap-2 mb-3">
+                                    @if (!empty($split_account_enabled))
                                         <button type="button" onclick="openSplitAccountModal()"
                                             class="inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-sm">
                                             <i class="ri-scissors-cut-line text-lg text-[#111827]"></i>
@@ -605,8 +605,76 @@
                                             class="text-xs text-slate-500 dark:text-slate-400 max-w-[14rem]"></span>
                                         <input type="checkbox" id="split-dividir-cuenta" class="hidden"
                                             aria-hidden="true">
+                                    @endif
+
+                                    <button type="button" onclick="toggleOrderDiscountPanel()" id="btn-toggle-discount-panel"
+                                        class="inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-sm">
+                                        <i class="ri-percent-line text-lg text-[#111827] dark:text-white"></i>
+                                        <span>Aplicar descuento</span>
+                                        <span id="discount-badge" class="hidden px-2 py-0.5 text-xs font-bold bg-[#111827] text-white rounded-full"></span>
+                                    </button>
+                                </div>
+
+                                <!-- Panel de Descuento -->
+                                <div id="order-discount-panel" class="hidden mb-3 p-3 bg-slate-50 dark:bg-gray-800/90 rounded-xl border border-slate-200 dark:border-gray-700 space-y-3 shadow-xs">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-1.5">
+                                            <i class="ri-percent-line text-base text-[#111827] dark:text-white"></i>
+                                            <span class="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">Descuento</span>
+                                        </div>
+                                        <button type="button" onclick="clearOrderDiscount()" class="text-xs font-semibold text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors">Limpiar</button>
                                     </div>
-                                @endif
+
+                                    <!-- Opciones rápidas de descuento (Porcentajes) -->
+                                    <div>
+                                        <span class="block text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500 mb-1.5">Descuento rápido (%):</span>
+                                        <div class="flex items-center gap-1.5 flex-wrap">
+                                            <button type="button" onclick="setOrderDiscountPercentPreset(5)" class="discount-preset-btn px-2.5 py-1 text-xs font-bold rounded-lg bg-white dark:bg-slate-700 border border-gray-200 dark:border-gray-600 hover:border-[#111827] hover:bg-[#111827]/10 text-slate-800 dark:text-slate-200 transition-all active:scale-95 shadow-xs" data-pct="5">5%</button>
+                                            <button type="button" onclick="setOrderDiscountPercentPreset(10)" class="discount-preset-btn px-2.5 py-1 text-xs font-bold rounded-lg bg-white dark:bg-slate-700 border border-gray-200 dark:border-gray-600 hover:border-[#111827] hover:bg-[#111827]/10 text-slate-800 dark:text-slate-200 transition-all active:scale-95 shadow-xs" data-pct="10">10%</button>
+                                            <button type="button" onclick="setOrderDiscountPercentPreset(15)" class="discount-preset-btn px-2.5 py-1 text-xs font-bold rounded-lg bg-white dark:bg-slate-700 border border-gray-200 dark:border-gray-600 hover:border-[#111827] hover:bg-[#111827]/10 text-slate-800 dark:text-slate-200 transition-all active:scale-95 shadow-xs" data-pct="15">15%</button>
+                                            <button type="button" onclick="setOrderDiscountPercentPreset(20)" class="discount-preset-btn px-2.5 py-1 text-xs font-bold rounded-lg bg-white dark:bg-slate-700 border border-gray-200 dark:border-gray-600 hover:border-[#111827] hover:bg-[#111827]/10 text-slate-800 dark:text-slate-200 transition-all active:scale-95 shadow-xs" data-pct="20">20%</button>
+                                            <button type="button" onclick="setOrderDiscountPercentPreset(50)" class="discount-preset-btn px-2.5 py-1 text-xs font-bold rounded-lg bg-white dark:bg-slate-700 border border-gray-200 dark:border-gray-600 hover:border-[#111827] hover:bg-[#111827]/10 text-slate-800 dark:text-slate-200 transition-all active:scale-95 shadow-xs" data-pct="50">50%</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- 2 Inputs sincronizados: Porcentaje y Monto -->
+                                    <div class="grid grid-cols-2 gap-2.5">
+                                        <div>
+                                            <label class="block text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 mb-1">Porcentaje (%)</label>
+                                            <div class="relative">
+                                                <input type="number" id="order-discount-pct-input" step="0.01" min="0" max="100" placeholder="0.00"
+                                                    oninput="onOrderDiscountPctInput(this.value)" onblur="normalizeOrderDiscountInputs()"
+                                                    class="w-full pl-3 pr-6 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-bold tabular-nums text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#111827]/20 focus:border-[#111827]">
+                                                <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400 dark:text-gray-500">%</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 mb-1">Monto (S/)</label>
+                                            <div class="relative">
+                                                <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400 dark:text-gray-500">S/</span>
+                                                <input type="number" id="order-discount-amt-input" step="0.01" min="0" placeholder="0.00"
+                                                    oninput="onOrderDiscountAmtInput(this.value)" onblur="normalizeOrderDiscountInputs()"
+                                                    class="w-full pl-7 pr-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-bold tabular-nums text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#111827]/20 focus:border-[#111827]">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Resumen detallado del Descuento -->
+                                    <div id="order-discount-summary-box" class="rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-2.5 space-y-1 text-xs">
+                                        <div class="flex justify-between items-center text-slate-500 dark:text-slate-400">
+                                            <span>Total Original:</span>
+                                            <span id="order-discount-orig-total" class="font-semibold tabular-nums text-slate-700 dark:text-slate-300">S/ 0.00</span>
+                                        </div>
+                                        <div class="flex justify-between items-center text-red-600 dark:text-red-400 font-semibold">
+                                            <span>Monto Descontado:</span>
+                                            <span id="order-discount-amount-display" class="tabular-nums">- S/ 0.00</span>
+                                        </div>
+                                        <div class="border-t border-dashed border-gray-200 dark:border-gray-700 my-1 pt-1 flex justify-between items-center font-bold text-slate-900 dark:text-white text-sm">
+                                            <span>Total final a pagar:</span>
+                                            <span id="order-discount-final-total" class="text-indigo-600 dark:text-indigo-400 text-base tabular-nums">S/ 0.00</span>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div>
                                     <div class="flex items-center justify-between mb-2">
                                         <label
@@ -6349,15 +6417,10 @@
                             }
                             return;
                         }
-                        const totals = getTotalsWithDelivery(items);
-                        const total = totals.total;
-                        let cobroTotal = total;
+                        let cobroTotal = getCobroTotalToPay();
                         let splitPayload = null;
                         try {
                             splitPayload = buildSplitPayloadForPayment();
-                            if (splitPayload) {
-                                cobroTotal = computeSplitPartTotal(splitPayload);
-                            }
                         } catch (e) {
                             if (typeof showNotification === 'function') {
                                 showNotification('Error', e.message || 'Error en división de cuenta.', 'error');
@@ -6527,6 +6590,7 @@
                             const creditDaysEl = document.getElementById('cobro-credit-days');
                             const dueDateEl = document.getElementById('cobro-due-date');
 
+                            const discountMeta = getOrderDiscountMeta(getCobroGrossOrderTotal());
                             const paymentPayload = {
                                 movement_id: movementId,
                                 table_id: counterPosMode ? null : (currentTable.table_id ?? currentTable.id),
@@ -6541,6 +6605,8 @@
                                 credit_days: creditDaysEl?.value || 0,
                                 due_date: dueDateEl?.value || null,
                                 notes: '',
+                                discount_type: discountMeta.amount > 0 ? discountMeta.type : null,
+                                discount_value: discountMeta.amount > 0 ? (discountMeta.type === 'percentage' ? discountMeta.percentage : discountMeta.amount) : 0,
                             };
                             if (splitPayload) {
                                 paymentPayload.split = splitPayload;
@@ -6912,7 +6978,7 @@
                         if (cobroInput) cobroInput.value = name || 'CLIENTES VARIOS';
                     }
 
-                    function getCobroOrderTotal() {
+                    function getCobroGrossOrderTotal() {
                         const cb = document.getElementById('split-dividir-cuenta');
                         if (cb && cb.checked && window.__splitAccount && window.__splitAccount.enabled) {
                             try {
@@ -6926,6 +6992,183 @@
                         }
                         const totals = getTotalsWithDelivery(currentTable?.items || []);
                         return totals.total || 0;
+                    }
+
+                    function getOrderDiscountMeta(grossTotal) {
+                        grossTotal = typeof grossTotal === 'number' ? grossTotal : getCobroGrossOrderTotal();
+                        const pctInp = document.getElementById('order-discount-pct-input');
+                        const amtInp = document.getElementById('order-discount-amt-input');
+
+                        const pctVal = parseFloat(pctInp?.value || 0) || 0;
+                        const amtVal = parseFloat(amtInp?.value || 0) || 0;
+
+                        const activeId = document.activeElement ? document.activeElement.id : '';
+                        let type = 'amount';
+                        let percentage = 0;
+                        let amount = 0;
+
+                        if (activeId === 'order-discount-pct-input' || (pctVal > 0 && activeId !== 'order-discount-amt-input')) {
+                            type = 'percentage';
+                            percentage = Math.min(100, Math.max(0, pctVal));
+                            amount = grossTotal > 0 ? Math.round(grossTotal * (percentage / 100) * 100) / 100 : 0;
+                        } else if (amtVal > 0 || activeId === 'order-discount-amt-input') {
+                            type = 'amount';
+                            amount = Math.min(grossTotal, Math.max(0, amtVal));
+                            percentage = grossTotal > 0 ? (amount / grossTotal) * 100 : 0;
+                        }
+
+                        const netTotal = Math.max(0, grossTotal - amount);
+                        return {
+                            type,
+                            percentage,
+                            amount,
+                            grossTotal,
+                            netTotal
+                        };
+                    }
+
+                    function toggleOrderDiscountPanel() {
+                        const panel = document.getElementById('order-discount-panel');
+                        if (!panel) return;
+                        const isHidden = panel.classList.contains('hidden');
+                        if (isHidden) {
+                            panel.classList.remove('hidden');
+                            syncOrderDiscountUI();
+                        } else {
+                            panel.classList.add('hidden');
+                        }
+                    }
+
+                    function setOrderDiscountPercentPreset(pct) {
+                        const pctInp = document.getElementById('order-discount-pct-input');
+                        const amtInp = document.getElementById('order-discount-amt-input');
+                        if (pctInp) pctInp.value = pct;
+                        if (amtInp) amtInp.value = '';
+                        syncOrderDiscountUI();
+                    }
+
+                    function onOrderDiscountPctInput(val) {
+                        const amtInp = document.getElementById('order-discount-amt-input');
+                        if (amtInp) amtInp.value = '';
+                        syncOrderDiscountUI();
+                    }
+
+                    function onOrderDiscountAmtInput(val) {
+                        const pctInp = document.getElementById('order-discount-pct-input');
+                        if (pctInp) pctInp.value = '';
+                        syncOrderDiscountUI();
+                    }
+
+                    function normalizeOrderDiscountInputs() {
+                        const gross = getCobroGrossOrderTotal();
+                        const meta = getOrderDiscountMeta(gross);
+                        const pctInp = document.getElementById('order-discount-pct-input');
+                        const amtInp = document.getElementById('order-discount-amt-input');
+
+                        if (meta.amount > 0) {
+                            if (meta.type === 'percentage' && pctInp && pctInp.value !== '') {
+                                pctInp.value = meta.percentage.toFixed(2).replace(/\.00$/, '');
+                            } else if (meta.type === 'amount' && amtInp && amtInp.value !== '') {
+                                amtInp.value = meta.amount.toFixed(2);
+                            }
+                        }
+                    }
+
+                    function clearOrderDiscount() {
+                        const pctInp = document.getElementById('order-discount-pct-input');
+                        const amtInp = document.getElementById('order-discount-amt-input');
+                        if (pctInp) pctInp.value = '';
+                        if (amtInp) amtInp.value = '';
+                        syncOrderDiscountUI();
+                    }
+
+                    function syncOrderDiscountUI() {
+                        const gross = getCobroGrossOrderTotal();
+                        const meta = getOrderDiscountMeta(gross);
+                        const pctInp = document.getElementById('order-discount-pct-input');
+                        const amtInp = document.getElementById('order-discount-amt-input');
+
+                        const activeId = document.activeElement ? document.activeElement.id : '';
+                        if (meta.amount > 0) {
+                            if (meta.type === 'percentage') {
+                                if (amtInp && activeId !== 'order-discount-amt-input') {
+                                    amtInp.value = meta.amount > 0 ? meta.amount.toFixed(2) : '';
+                                }
+                            } else {
+                                if (pctInp && activeId !== 'order-discount-pct-input') {
+                                    pctInp.value = meta.percentage > 0 ? meta.percentage.toFixed(2).replace(/\.00$/, '') : '';
+                                }
+                            }
+                        } else {
+                            if (pctInp && activeId !== 'order-discount-pct-input' && !pctInp.value) pctInp.value = '';
+                            if (amtInp && activeId !== 'order-discount-amt-input' && !amtInp.value) amtInp.value = '';
+                        }
+
+                        document.querySelectorAll('.discount-preset-btn').forEach(btn => {
+                            const presetPct = parseFloat(btn.getAttribute('data-pct') || 0);
+                            const isMatch = meta.type === 'percentage' && Math.abs(meta.percentage - presetPct) < 0.01;
+                            if (isMatch) {
+                                btn.classList.add('bg-[#111827]', 'text-white', 'border-[#111827]');
+                                btn.classList.remove('bg-white', 'dark:bg-slate-700', 'text-slate-800', 'dark:text-slate-200');
+                            } else {
+                                btn.classList.remove('bg-[#111827]', 'text-white', 'border-[#111827]');
+                                btn.classList.add('bg-white', 'dark:bg-slate-700', 'text-slate-800', 'dark:text-slate-200');
+                            }
+                        });
+
+                        const origEl = document.getElementById('order-discount-orig-total');
+                        const discEl = document.getElementById('order-discount-amount-display');
+                        const finalEl = document.getElementById('order-discount-final-total');
+
+                        if (origEl) origEl.textContent = 'S/ ' + gross.toFixed(2);
+                        if (discEl) {
+                            if (meta.amount > 0) {
+                                discEl.textContent = `- S/ ${meta.amount.toFixed(2)} (${meta.percentage.toFixed(1)}%)`;
+                            } else {
+                                discEl.textContent = '- S/ 0.00';
+                            }
+                        }
+                        if (finalEl) finalEl.textContent = 'S/ ' + meta.netTotal.toFixed(2);
+
+                        const badge = document.getElementById('discount-badge');
+                        const btnToggle = document.getElementById('btn-toggle-discount-panel');
+                        if (badge) {
+                            if (meta.amount > 0) {
+                                badge.textContent = meta.type === 'percentage' ? `-${meta.percentage.toFixed(0)}%` : `-S/ ${meta.amount.toFixed(2)}`;
+                                badge.classList.remove('hidden');
+                                if (btnToggle) {
+                                    btnToggle.classList.add('border-[#111827]', 'bg-gray-100', 'dark:bg-gray-700');
+                                }
+                            } else {
+                                badge.classList.add('hidden');
+                                if (btnToggle) {
+                                    btnToggle.classList.remove('border-[#111827]', 'bg-gray-100', 'dark:bg-gray-700');
+                                }
+                            }
+                        }
+
+                        updateOrderCobroTotals();
+                    }
+
+                    function updateOrderCobroTotals() {
+                        const list = document.getElementById('cobro-payment-methods-list');
+                        if (list) {
+                            const rows = list.querySelectorAll('.cobro-pm-row');
+                            const netTotal = getCobroOrderTotal();
+                            if (rows.length === 1) {
+                                const amtInput = rows[0].querySelector('.cobro-pm-amount');
+                                if (amtInput) {
+                                    amtInput.value = netTotal.toFixed(2);
+                                }
+                            }
+                        }
+                        updateCobroTotalPaid();
+                    }
+
+                    function getCobroOrderTotal() {
+                        const gross = getCobroGrossOrderTotal();
+                        const meta = getOrderDiscountMeta(gross);
+                        return meta.netTotal;
                     }
 
                     function getCobroRemainingAmount(excludeInput) {
@@ -6957,24 +7200,7 @@
                     }
 
                     function getCobroTotalToPay() {
-                        if (!window.currentTable) return 0;
-                        const items = window.currentTable.items || [];
-                        if (items.length === 0) return 0;
-
-                        const cb = document.getElementById('split-dividir-cuenta');
-                        const splitOn = !!(cb && cb.checked && window.__splitAccount && window.__splitAccount.enabled);
-                        if (splitOn) {
-                            try {
-                                const splitPayload = buildSplitPayloadForPayment();
-                                if (splitPayload) {
-                                    return computeSplitPartTotal(splitPayload);
-                                }
-                            } catch (e) {
-                                // fallback
-                            }
-                        }
-
-                        return getTotalsWithDelivery(items).total || 0;
+                        return getCobroOrderTotal();
                     }
 
                     function calcularVuelto() {
@@ -7479,6 +7705,15 @@
                     window.setCalculadoraPagaCon = setCalculadoraPagaCon;
                     window.clearCalculadoraVuelto = clearCalculadoraVuelto;
                     window.getCobroTotalToPay = getCobroTotalToPay;
+                    window.toggleOrderDiscountPanel = toggleOrderDiscountPanel;
+                    window.setOrderDiscountPercentPreset = setOrderDiscountPercentPreset;
+                    window.onOrderDiscountPctInput = onOrderDiscountPctInput;
+                    window.onOrderDiscountAmtInput = onOrderDiscountAmtInput;
+                    window.normalizeOrderDiscountInputs = normalizeOrderDiscountInputs;
+                    window.clearOrderDiscount = clearOrderDiscount;
+                    window.syncOrderDiscountUI = syncOrderDiscountUI;
+                    window.getOrderDiscountMeta = getOrderDiscountMeta;
+                    window.getCobroGrossOrderTotal = getCobroGrossOrderTotal;
                     window.clearHeaderClientName = clearHeaderClientName;
                     window.updateHeaderClientName = updateHeaderClientName;
                     window.changeClient = changeClient;

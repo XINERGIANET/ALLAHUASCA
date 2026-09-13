@@ -3590,7 +3590,7 @@ class OrderController extends Controller
 
             $requestDiscountValue = (float) $request->input('discount_value', 0);
             if ($requestDiscountValue > 0 && ! $hasPreviousSplits) {
-                $discountType = $request->input('discount_type', 'amount') === 'percent' ? 'percent' : 'amount';
+                $discountType = in_array($request->input('discount_type', 'amount'), ['percent', 'percentage']) ? 'percent' : 'amount';
                 $activeDetailsForCalc = $orderMovement->details->filter(fn($d) => ($d->status ?? 'A') !== 'C')->values();
                 $itemsForCalc = $activeDetailsForCalc->map(function ($d) {
                     $qty = (float) $d->quantity;
