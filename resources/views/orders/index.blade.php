@@ -590,7 +590,13 @@
 
                     async refreshTables() {
                         try {
-                            const res = await fetch(this.tablesDataUrl, {
+                            const url = new URL(this.tablesDataUrl, window.location.origin);
+                            const waiter = this.getStoredWaiter();
+                            if (waiter) {
+                                if (waiter.person_id) url.searchParams.set('waiter_person_id', waiter.person_id);
+                                if (waiter.user_name) url.searchParams.set('waiter_name', waiter.user_name);
+                            }
+                            const res = await fetch(url.toString(), {
                                 headers: {
                                     'Accept': 'application/json',
                                     'X-Requested-With': 'XMLHttpRequest'

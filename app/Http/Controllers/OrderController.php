@@ -677,6 +677,8 @@ class OrderController extends Controller
         $isMozo = current_user_is_mozo();
         $currentUserId = (int) (session('user_id') ?: auth()->id());
         $currentPersonId = (int) (session('person_id') ?: auth()->user()?->person_id);
+        $currentUserName = trim((string) ($request->input('waiter_name') ?: session('user_name') ?: auth()->user()?->name ?? ''));
+        $waiterPersonId = (int) ($request->input('waiter_person_id') ?: $currentPersonId);
 
         $areas = Area::query()
             ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
@@ -717,7 +719,7 @@ class OrderController extends Controller
             ->get()
             ->groupBy('table_id');
 
-        $tablesPayload = $tables->map(function (Table $table) use ($activeOrderMovements, $branchId, $isMozo, $currentUserId, $currentPersonId) {
+        $tablesPayload = $tables->map(function (Table $table) use ($activeOrderMovements, $branchId, $isMozo, $currentUserId, $currentPersonId, $currentUserName, $waiterPersonId) {
             $elapsed = '--:--';
             if (! empty($table->opened_at)) {
                 try {
@@ -757,14 +759,26 @@ class OrderController extends Controller
                 $elapsed = '--:--';
             }
 
-            // Si el perfil es Mozo, ocultar mesas atendidas por OTRO mozo (mismo criterio que tablesData()).
+            // Si el perfil es Mozo, ocultar mesas ocupadas que estén siendo atendidas por OTRO mozo
             $hideForMozo = false;
             if ($isMozo && $situation === 'ocupada') {
-                $assignedUserId = (int) ($orderMovement?->movement?->responsible_id ?? $orderMovement?->movement?->user_id ?? 0);
-                $assignedPersonId = (int) ($orderMovement?->movement?->person_id ?? 0);
-                $isSameUser = ($currentUserId > 0 && $assignedUserId > 0 && $currentUserId === $assignedUserId)
-                    || ($currentPersonId > 0 && $assignedPersonId > 0 && $currentPersonId === $assignedPersonId);
-                $hideForMozo = ! $isSameUser && ($assignedUserId > 0 || $assignedPersonId > 0);
+                $assignedUserId = (int) ($orderMovement?->movement?->user_id ?? 0);
+                $assignedResponsibleId = (int) ($orderMovement?->movement?->responsible_id ?? 0);
+                $assignedWaiterId = (int) ($orderMovement?->waiter_id ?? 0);
+                $assignedWaiterName = trim((string) ($orderMovement?->movement?->responsible_name ?? $orderMovement?->movement?->user_name ?? ''));
+
+                $isSameUser = false;
+                if ($currentUserId > 0 && ($assignedUserId === $currentUserId || $assignedResponsibleId === $currentUserId || $assignedWaiterId === $currentUserId)) {
+                    $isSameUser = true;
+                }
+                if ($waiterPersonId > 0 && ($assignedResponsibleId === $waiterPersonId || $assignedWaiterId === $waiterPersonId)) {
+                    $isSameUser = true;
+                }
+                if ($currentUserName !== '' && $assignedWaiterName !== '' && strcasecmp($currentUserName, $assignedWaiterName) === 0) {
+                    $isSameUser = true;
+                }
+
+                $hideForMozo = ! $isSameUser;
             }
 
             $productsText = '';
@@ -821,9 +835,10 @@ class OrderController extends Controller
                 'opened_at' => $openedAtForJs,
                 'products_text' => strtolower($productsText),
                 'orders_count' => $ordersCount,
-                'hide_for_mozo' => false,
+                'hide_for_mozo' => $hideForMozo,
             ];
         })
+        ->filter(fn($t) => ! ($isMozo && ($t['hide_for_mozo'] ?? false)))
         ->values();
 
         $areasArray = $areas->map(function ($area) {
@@ -987,7 +1002,8 @@ class OrderController extends Controller
         $isMozo = current_user_is_mozo();
         $currentUserId = (int) (session('user_id') ?: auth()->id());
         $currentPersonId = (int) (session('person_id') ?: auth()->user()?->person_id);
-        $currentUserName = trim((string) (auth()->user()?->name ?? session('user_name') ?? 'Mozo'));
+        $currentUserName = trim((string) ($request->input('waiter_name') ?: session('user_name') ?: auth()->user()?->name ?? 'Mozo'));
+        $waiterPersonId = (int) ($request->input('waiter_person_id') ?: $currentPersonId);
 
         $areas = Area::query()
             ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
@@ -999,7 +1015,7 @@ class OrderController extends Controller
             ->get(['id', 'name', 'area_id', 'capacity', 'situation', 'opened_at'])
             ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
             ->values();
-        $tablesPayload = $tables->map(function (Table $table) use ($branchId, $isMozo, $currentUserId, $currentPersonId, $currentUserName) {
+        $tablesPayload = $tables->map(function (Table $table) use ($branchId, $isMozo, $currentUserId, $currentPersonId, $currentUserName, $waiterPersonId) {
             $elapsed = '--:--';
             if (! empty($table->opened_at)) {
                 try {
@@ -1043,12 +1059,12 @@ class OrderController extends Controller
                 }
             }
 
-            // Datos del mozo asignado si la mesa está ocupada. Usar responsible_id (el mozo
-            // real, resuelto por PIN o selección) en vez de user_id (la cuenta que envió la
-            // petición, que en dispositivos compartidos es la misma para todos los mozos).
-            $assignedUserId = (int) ($orderMovement?->movement?->responsible_id ?? $orderMovement?->movement?->user_id ?? 0);
-            $assignedPersonId = (int) ($orderMovement?->movement?->person_id ?? 0);
-            $waiterName = $orderMovement?->movement?->responsible_name ?? $orderMovement?->movement?->user_name ?? '-';
+            // Datos del mozo asignado si la mesa está ocupada.
+            $assignedUserId = (int) ($orderMovement?->movement?->user_id ?? 0);
+            $assignedResponsibleId = (int) ($orderMovement?->movement?->responsible_id ?? 0);
+            $assignedWaiterId = (int) ($orderMovement?->waiter_id ?? 0);
+            $assignedWaiterName = trim((string) ($orderMovement?->movement?->responsible_name ?? $orderMovement?->movement?->user_name ?? ''));
+            $waiterName = $assignedWaiterName ?: '-';
 
             // Revisar si hay un mozo actualmente tomando pedido en esta mesa (draft lock)
             $draftLock = \Illuminate\Support\Facades\Cache::get("table_draft_lock:{$table->id}");
@@ -1059,7 +1075,7 @@ class OrderController extends Controller
                 $lockPerson = (int) ($draftLock['person_id'] ?? 0);
                 $lockUserName = trim((string) ($draftLock['user_name'] ?? ''));
                 $isSameUser = ($currentUserId > 0 && $lockUser === $currentUserId)
-                           || ($currentPersonId > 0 && $lockPerson === $currentPersonId)
+                           || ($waiterPersonId > 0 && $lockPerson === $waiterPersonId)
                            || ($currentUserName !== '' && $lockUserName !== '' && strcasecmp($currentUserName, $lockUserName) === 0);
                 if (! $isSameUser) {
                     $isDraftLockedByOther = true;
@@ -1071,19 +1087,22 @@ class OrderController extends Controller
             $isOccupiedByOther = false;
             if ($situation === 'ocupada') {
                 $isSameUser = false;
-                if ($currentUserId > 0 && $assignedUserId > 0 && $currentUserId === $assignedUserId) {
+                if ($currentUserId > 0 && ($assignedUserId === $currentUserId || $assignedResponsibleId === $currentUserId || $assignedWaiterId === $currentUserId)) {
                     $isSameUser = true;
                 }
-                if ($currentPersonId > 0 && $assignedPersonId > 0 && $currentPersonId === $assignedPersonId) {
+                if ($waiterPersonId > 0 && ($assignedResponsibleId === $waiterPersonId || $assignedWaiterId === $waiterPersonId)) {
                     $isSameUser = true;
                 }
-                if (! $isSameUser && ($assignedUserId > 0 || $assignedPersonId > 0)) {
+                if ($currentUserName !== '' && $assignedWaiterName !== '' && strcasecmp($currentUserName, $assignedWaiterName) === 0) {
+                    $isSameUser = true;
+                }
+                if (! $isSameUser) {
                     $isOccupiedByOther = true;
                 }
             }
 
-            // Si el perfil es Mozo, debemos ocultarle mesas que estén siendo atendidas o tomadas por OTRO mozo
-            $hideForMozo = $isMozo && ($isOccupiedByOther || $isDraftLockedByOther);
+            // Si el perfil es Mozo, debemos ocultarle mesas ocupadas por OTRO mozo
+            $hideForMozo = $isMozo && $situation === 'ocupada' && $isOccupiedByOther;
 
             $productsText = '';
             if ($orderMovement && $orderMovement->relationLoaded('details') && $orderMovement->details->isNotEmpty()) {
@@ -1132,9 +1151,10 @@ class OrderController extends Controller
                 'is_occupied_by_other' => $isOccupiedByOther,
                 'is_draft_locked_by_other' => $isDraftLockedByOther,
                 'locked_by_name' => $lockedByName,
-                'hide_for_mozo' => false,
+                'hide_for_mozo' => $hideForMozo,
             ];
         })
+        ->filter(fn($t) => ! ($isMozo && ($t['hide_for_mozo'] ?? false)))
         ->values();
 
         $areasArray = $areas->map(fn($area) => ['id' => (int) $area->id, 'name' => $area->name])->values();
