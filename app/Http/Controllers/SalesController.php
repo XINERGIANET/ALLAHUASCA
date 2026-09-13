@@ -2616,32 +2616,12 @@ class SalesController extends Controller
         if (! $apisunatService->isConfiguredForBranch($movement->branch)) {
             return [
                 'status' => 'SKIPPED',
-                'message' => 'La sucursal no tiene Apisunat configurado.',
+                'message' => 'La sucursal no tiene APISUNAT configurado.',
             ];
         }
 
         try {
-            $result = $apisunatService->emitSale($movement);
-            if (($result['status'] ?? null) === 'SENT') {
-                $data = $result['data'] ?? [];
-                $movement->forceFill([
-                    'number' => $data['correlative'] ?? $movement->number,
-                    'electronic_invoice_provider' => $data['provider'] ?? 'apisunat',
-                    'electronic_invoice_status' => 'SENT',
-                    'electronic_invoice_external_id' => $data['external_id'] ?? null,
-                    'electronic_invoice_series' => $data['series'] ?? null,
-                    'electronic_invoice_number' => $data['full_number'] ?? null,
-                    'electronic_invoice_file_name' => $data['file_name'] ?? null,
-                    'electronic_invoice_pdf_ticket_url' => $data['pdf_ticket_80mm'] ?? null,
-                    'electronic_invoice_pdf_a4_url' => $data['pdf_a4'] ?? null,
-                    'electronic_invoice_xml_url' => $data['xml_url'] ?? null,
-                    'electronic_invoice_cdr_url' => $data['cdr_url'] ?? null,
-                    'electronic_invoice_response' => $data['response'] ?? null,
-                ])->save();
-                $movement->refresh();
-            }
-
-            return $result;
+            return $apisunatService->emitSale($movement);
         } catch (\Throwable $e) {
             $movement->forceFill([
                 'electronic_invoice_provider' => 'apisunat',
@@ -3809,11 +3789,6 @@ class SalesController extends Controller
         } catch (\Throwable $e) {
             return back()->with('error', 'Error emitiendo a SUNAT: ' . $e->getMessage());
         }
-    }
-
-    protected function syncElectronicInvoiceForSale(Movement $sale, ApisunatService $apisunatService): array
-    {
-        return $apisunatService->emitSale($sale);
     }
 
     /**
