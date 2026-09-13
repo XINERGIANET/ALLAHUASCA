@@ -821,10 +821,9 @@ class OrderController extends Controller
                 'opened_at' => $openedAtForJs,
                 'products_text' => strtolower($productsText),
                 'orders_count' => $ordersCount,
-                'hide_for_mozo' => $hideForMozo,
+                'hide_for_mozo' => false,
             ];
         })
-        ->filter(fn($t) => ! ($isMozo && ($t['hide_for_mozo'] ?? false)))
         ->values();
 
         $areasArray = $areas->map(function ($area) {
@@ -1133,10 +1132,9 @@ class OrderController extends Controller
                 'is_occupied_by_other' => $isOccupiedByOther,
                 'is_draft_locked_by_other' => $isDraftLockedByOther,
                 'locked_by_name' => $lockedByName,
-                'hide_for_mozo' => $hideForMozo,
+                'hide_for_mozo' => false,
             ];
         })
-        ->filter(fn($t) => ! ($isMozo && ($t['hide_for_mozo'] ?? false)))
         ->values();
 
         $areasArray = $areas->map(fn($area) => ['id' => (int) $area->id, 'name' => $area->name])->values();
@@ -1221,11 +1219,15 @@ class OrderController extends Controller
             // Usar responsible_id (el mozo real) en vez de user_id (la cuenta de la petición),
             // igual que en tablesData(), para no bloquear al mozo su propia mesa.
             $assignedUserId = (int) ($orderMovement->movement?->responsible_id ?? $orderMovement->movement?->user_id ?? 0);
-            $assignedPersonId = (int) ($orderMovement->movement?->person_id ?? 0);
-            $isSameUser = ($currentUserId > 0 && $assignedUserId > 0 && $currentUserId === $assignedUserId)
-                       || ($currentPersonId > 0 && $assignedPersonId > 0 && $currentPersonId === $assignedPersonId);
-            if ($isMozo && ! $isSameUser && ($assignedUserId > 0 || $assignedPersonId > 0)) {
-                $waiterName = $orderMovement->movement?->responsible_name ?? $orderMovement->movement?->user_name ?? 'otro mozo';
+            $assignedWaiterId = (int) ($orderMovement->waiter_id ?? 0);
+            $assignedWaiterName = trim((string) ($orderMovement->movement?->responsible_name ?? $orderMovement->movement?->user_name ?? ''));
+
+            $isSameUser = ($currentUserId > 0 && ($assignedUserId === $currentUserId || $assignedWaiterId === $currentUserId))
+                       || ($currentPersonId > 0 && ($assignedUserId === $currentPersonId || $assignedWaiterId === $currentPersonId))
+                       || ($currentUserName !== '' && $assignedWaiterName !== '' && strcasecmp($currentUserName, $assignedWaiterName) === 0);
+
+            if ($isMozo && ! $isSameUser && ($assignedUserId > 0 || $assignedWaiterId > 0)) {
+                $waiterName = $assignedWaiterName ?: 'otro mozo';
                 return redirect()->route('orders.index')->with('error', "La Mesa {$table->name} ya está siendo atendida por {$waiterName}.");
             }
         }
