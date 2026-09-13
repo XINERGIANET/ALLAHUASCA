@@ -3586,6 +3586,33 @@ class OrderController extends Controller
             $saleSubtotal = (float) ($orderMovement->subtotal ?? 0);
             $saleTax = (float) ($orderMovement->tax ?? 0);
             $saleTotal = (float) ($orderMovement->total ?? 0);
+            $orderCalculatedLines = null;
+
+            $requestDiscountValue = (float) $request->input('discount_value', 0);
+            if ($requestDiscountValue > 0 && ! $hasPreviousSplits) {
+                $discountType = $request->input('discount_type', 'amount') === 'percent' ? 'percent' : 'amount';
+                $activeDetailsForCalc = $orderMovement->details->filter(fn($d) => ($d->status ?? 'A') !== 'C')->values();
+                $itemsForCalc = $activeDetailsForCalc->map(function ($d) {
+                    $qty = (float) $d->quantity;
+                    $courtesyQty = max(0, min((float) ($d->courtesy_quantity ?? 0), $qty));
+                    $paidQty = max(0, $qty - $courtesyQty);
+                    $amount = (float) $d->amount;
+                    $unitPrice = $paidQty > 0 ? ($amount / $paidQty) : 0;
+
+                    return [
+                        'pId' => $d->product_id,
+                        'qty' => $qty,
+                        'courtesyQty' => $courtesyQty,
+                        'price' => $unitPrice,
+                    ];
+                })->toArray();
+
+                $calc = (new SalesController)->calculateSubtotalAndTaxFromItems($itemsForCalc, $branchId, $discountType, $requestDiscountValue);
+                $saleSubtotal = (float) $calc['subtotal'];
+                $saleTax = (float) $calc['tax'];
+                $saleTotal = (float) $calc['total'];
+                $orderCalculatedLines = collect($calc['lines'] ?? []);
+            }
 
             if ($hasPreviousSplits) {
                 $orderMovement->loadMissing(['details' => function ($q) {
@@ -3731,21 +3758,25 @@ class OrderController extends Controller
                                 ]);
                             }
                         } else {
-                            foreach ($activeOrderDetails as $orderDetail) {
+                            foreach ($activeOrderDetails as $idx => $orderDetail) {
                             if (($orderDetail->status ?? 'A') === 'C') {
                                 continue;
                             }
 
                             // Calcular subtotal (original_amount) usando IGV por defecto de sucursal
                             $qty = (float) $orderDetail->quantity;
-                            $totalDetail = (float) $orderDetail->amount;
+                            $grossDetail = (float) $orderDetail->amount;
                             $branchTaxRate = (new SalesController)->getBranchIgvDefectoTaxRate($branchId);
                             $taxRateVal = $branchTaxRate ? ((float) $branchTaxRate->tax_rate / 100) : 0.18;
                             if (! $branchTaxRate && $orderDetail->tax_rate_snapshot && isset($orderDetail->tax_rate_snapshot['tax_rate'])) {
                                 $taxRateVal = (float) $orderDetail->tax_rate_snapshot['tax_rate'] / 100;
                             }
 
-                            $subtotalDetail = $taxRateVal > 0 ? ($totalDetail / (1 + $taxRateVal)) : $totalDetail;
+                            $lineCalc = $orderCalculatedLines ? $orderCalculatedLines->get($idx) : null;
+                            $finalDetailAmount = $lineCalc ? (float) $lineCalc['total'] : $grossDetail;
+                            $subtotalDetail = $lineCalc ? (float) $lineCalc['subtotal'] : ($taxRateVal > 0 ? ($finalDetailAmount / (1 + $taxRateVal)) : $finalDetailAmount);
+                            $detailDiscount = $lineCalc ? (float) ($lineCalc['discount_amount'] ?? 0) : 0.0;
+                            $discountPct = ($lineCalc && $grossDetail > 0) ? round(($detailDiscount / $grossDetail) * 100, 6) : 0.0;
 
                             SalesMovementDetail::create([
                                 'detail_type' => 'DETAILED',
@@ -3763,8 +3794,8 @@ class OrderController extends Controller
                                 ] : $orderDetail->tax_rate_snapshot,
                                 'quantity' => $orderDetail->quantity,
                                 'courtesy_quantity' => (int) $orderDetail->courtesy_quantity,
-                                'amount' => $orderDetail->amount,
-                                'discount_percentage' => 0,
+                                'amount' => $finalDetailAmount,
+                                'discount_percentage' => $discountPct,
                                 'original_amount' => $subtotalDetail,
                                 'comment' => $orderDetail->comment,
                                 'complements' => $orderDetail->complements ?? [],

@@ -119,10 +119,31 @@
                                     <span class="text-gray-600 dark:text-gray-400">IGV</span>
                                     <span class="font-semibold tabular-nums text-gray-900 dark:text-white" id="tax">S/0.00</span>
                                 </div>
+                                <div id="discount-row" class="hidden justify-between items-center gap-3 text-red-600 dark:text-red-400 font-semibold">
+                                    <span>Descuento</span>
+                                    <span class="tabular-nums" id="discount-amount">- S/0.00</span>
+                                </div>
                                 <div class="mt-2 flex justify-between items-center gap-3 border-t border-slate-200 pt-2.5 dark:border-gray-600">
                                     <span class="text-sm font-bold text-gray-900 dark:text-white">Total a pagar</span>
                                     <span class="text-xl font-extrabold tabular-nums text-blue-600 dark:text-blue-400" id="total">S/0.00</span>
                                 </div>
+                            </div>
+                        </div>
+
+                        <div class="rounded-xl border border-indigo-100 bg-indigo-50/35 p-3 dark:border-gray-600 dark:bg-gray-800 shadow-sm">
+                            <label class="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                <i class="fas fa-percentage text-[11px] text-indigo-600 dark:text-indigo-400"></i> Descuento
+                            </label>
+                            <div class="grid grid-cols-[96px_1fr] gap-2">
+                                <select id="charge-discount-type"
+                                    class="w-full py-2 px-3 rounded-lg border border-slate-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-xs font-semibold text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                    onchange="setChargeDiscountType(this.value)">
+                                    <option value="amount">S/</option>
+                                    <option value="percent">%</option>
+                                </select>
+                                <input type="number" id="charge-discount-value" min="0" step="0.01" value="0.00"
+                                    class="w-full py-2 px-3 rounded-lg border border-slate-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-xs tabular-nums text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                    oninput="setChargeDiscountValue(this.value)" onblur="normalizeChargeDiscountInput()">
                             </div>
                         </div>
 
@@ -1416,6 +1437,10 @@ pmSelectionButtons.forEach(btn => {
                     pendingAmount: draftSaleFromServer.pendingAmount || 0,
                     sale_payment_mode: draftSaleFromServer.sale_payment_mode || null,
                     credit_days: draftSaleFromServer.credit_days != null ? draftSaleFromServer.credit_days : null,
+                    discount: draftSaleFromServer.discount || {
+                        type: draftSaleFromServer.discount_type || 'amount',
+                        value: parseFloat(draftSaleFromServer.discount_value || 0) || 0
+                    }
                 };
             } else if (sessionStorage.getItem('sales_charge_from_create') === '1') {
                 sessionStorage.removeItem('sales_charge_from_create');
@@ -1424,6 +1449,9 @@ pmSelectionButtons.forEach(btn => {
                 const fromStorage = activeKey ? db[activeKey] : null;
                 if (fromStorage && Array.isArray(fromStorage.items)) {
                     sale = { ...fromStorage, items: validItems(fromStorage.items) };
+                    if (!sale.discount || typeof sale.discount !== 'object') {
+                        sale.discount = { type: 'amount', value: 0 };
+                    }
                     if (sale.items.length !== fromStorage.items.length && activeKey) {
                         db[activeKey] = sale;
                         localStorage.setItem('restaurantDB', JSON.stringify(db));
@@ -1442,6 +1470,74 @@ pmSelectionButtons.forEach(btn => {
 
             // Hacer fmtMoney disponible globalmente
             window.fmtMoney = fmtMoney;
+
+            function getChargeDiscountMeta(grossTotal) {
+                const saleDiscount = sale?.discount || {};
+                const type = saleDiscount.type === 'percent' ? 'percent' : 'amount';
+                let value = parseFloat(String(saleDiscount.value ?? 0).replace(',', '.')) || 0;
+                value = Math.max(0, value);
+                if (type === 'percent') {
+                    value = Math.min(100, value);
+                    return {
+                        type,
+                        value,
+                        amount: Math.round((Math.max(0, grossTotal) * value / 100) * 100) / 100
+                    };
+                }
+                value = Math.min(Math.max(0, grossTotal), value);
+                return {
+                    type,
+                    value,
+                    amount: Math.round(value * 100) / 100
+                };
+            }
+
+            function setChargeDiscountType(type) {
+                if (!sale) return;
+                sale.discount = sale.discount || {};
+                sale.discount.type = type === 'percent' ? 'percent' : 'amount';
+                sale.discount.value = Math.max(0, parseFloat(sale.discount.value || 0) || 0);
+                saveSaleToStorage();
+                renderSale();
+            }
+
+            function setChargeDiscountValue(value) {
+                if (!sale) return;
+                sale.discount = sale.discount || {};
+                sale.discount.type = sale.discount.type === 'percent' ? 'percent' : 'amount';
+                sale.discount.value = Math.max(0, parseFloat(String(value || 0).replace(',', '.')) || 0);
+                saveSaleToStorage();
+                renderSale();
+            }
+
+            function normalizeChargeDiscountInput() {
+                if (!sale) return;
+                let grossTotal = 0;
+                (sale.items || []).forEach(it => {
+                    grossTotal += (Number(it.qty) || 0) * (Number(it.price) || 0);
+                });
+                const meta = getChargeDiscountMeta(grossTotal);
+                sale.discount = {
+                    type: meta.type,
+                    value: meta.value
+                };
+                saveSaleToStorage();
+                renderSale();
+            }
+
+            function saveSaleToStorage() {
+                const activeKey = localStorage.getItem(ACTIVE_SALE_KEY_STORAGE);
+                if (activeKey && sale) {
+                    const db = JSON.parse(localStorage.getItem('restaurantDB') || '{}');
+                    db[activeKey] = sale;
+                    localStorage.setItem('restaurantDB', JSON.stringify(db));
+                }
+            }
+
+            window.setChargeDiscountType = setChargeDiscountType;
+            window.setChargeDiscountValue = setChargeDiscountValue;
+            window.normalizeChargeDiscountInput = normalizeChargeDiscountInput;
+
             function hydratePaymentMethodsFromSale(total) {
                 if (!sale || !Array.isArray(sale.payment_methods) || sale.payment_methods.length === 0) {
                     return false;
@@ -1508,14 +1604,13 @@ pmSelectionButtons.forEach(btn => {
                 const totalItems = sale.items.reduce((sum, it) => sum + (Number(it.qty) || 0), 0);
                 document.getElementById('items-count').textContent = `${totalItems} items`;
 
-                let subtotal = 0;
+                let grossTotal = 0;
                 const rows = sale.items.map((it) => {
                     const qty = Number(it.qty) || 0;
-                    // Buscar el nombre del producto: primero en it.name, luego en productsMap, luego usar ID
                     const description = it.name || productsMap[it.pId] || `Producto #${it.pId}`;
                     const price = Number(it.price) || 0;
                     const lineTotal = qty * price;
-                    subtotal += lineTotal;
+                    grossTotal += lineTotal;
                     const safeNote = (it.note ?? it.comment ?? '') || '';
                     return `
                 <div class="flex items-center justify-between rounded-lg border border-gray-200 p-2 dark:border-gray-700 dark:bg-gray-700">
@@ -1531,11 +1626,27 @@ pmSelectionButtons.forEach(btn => {
 
                 document.getElementById('items-list').innerHTML = rows;
 
-                // Calcular subtotal e IGV por producto según su tasa (del sistema o del ítem si es borrador).
+                // Aplicar descuento general sobre las líneas
+                const discountMeta = getChargeDiscountMeta(grossTotal);
+                const discountAmount = discountMeta.amount;
+
                 let subtotalBase = 0;
                 let tax = 0;
-                sale.items.forEach((it) => {
-                    const itemTotal = (Number(it.qty) || 0) * (Number(it.price) || 0);
+                const lastIdx = sale.items.length - 1;
+                let allocatedDiscount = 0;
+
+                sale.items.forEach((it, idx) => {
+                    const lineGross = (Number(it.qty) || 0) * (Number(it.price) || 0);
+                    let lineDiscount = 0;
+                    if (discountAmount > 0 && grossTotal > 0) {
+                        lineDiscount = idx === lastIdx
+                            ? (discountAmount - allocatedDiscount)
+                            : (discountAmount * (lineGross / grossTotal));
+                    }
+                    lineDiscount = Math.max(0, Math.min(lineGross, lineDiscount));
+                    allocatedDiscount += lineDiscount;
+
+                    const itemTotal = lineGross - lineDiscount;
                     const taxPct = it.tax_rate != null ? Number(it.tax_rate) : (taxRateByProductId.get(Number(it.pId)) ?? defaultTaxPct);
                     const taxVal = taxPct / 100;
                     const itemSubtotal = taxVal > 0 ? itemTotal / (1 + taxVal) : itemTotal;
@@ -1546,7 +1657,30 @@ pmSelectionButtons.forEach(btn => {
 
                 document.getElementById('subtotal').textContent = fmtMoney(subtotalBase);
                 document.getElementById('tax').textContent = fmtMoney(tax);
+
+                const discountRow = document.getElementById('discount-row');
+                const discountEl = document.getElementById('discount-amount');
+                if (discountRow && discountEl) {
+                    if (discountAmount > 0.009) {
+                        discountRow.classList.remove('hidden');
+                        discountRow.classList.add('flex');
+                        discountEl.textContent = '- ' + fmtMoney(discountAmount);
+                    } else {
+                        discountRow.classList.add('hidden');
+                        discountRow.classList.remove('flex');
+                    }
+                }
+
                 document.getElementById('total').textContent = fmtMoney(total);
+
+                const dtInput = document.getElementById('charge-discount-type');
+                const dvInput = document.getElementById('charge-discount-value');
+                if (dtInput && dtInput.value !== (sale.discount?.type || 'amount')) {
+                    dtInput.value = sale.discount?.type || 'amount';
+                }
+                if (dvInput && document.activeElement !== dvInput) {
+                    dvInput.value = (parseFloat(sale.discount?.value || 0) || 0).toFixed(2);
+                }
 
                 // Inicializar el primer método de pago con el total
                 const preloaded = hydratePaymentMethodsFromSale(total);
@@ -1747,6 +1881,8 @@ pmSelectionButtons.forEach(btn => {
                     document_type_id: parseInt(docTypeId),
                     cash_register_id: parseInt(cashRegisterId),
                     person_id: clientInput?.value ? parseInt(clientInput.value) : null,
+                    discount_type: sale?.discount?.type || 'amount',
+                    discount_value: sale?.discount?.value || 0,
                     payment_methods: paymentMethodsData.map(pm => ({
                         payment_method_id: pm.methodId,
                         amount: parseFloat(pm.amount) || 0,
