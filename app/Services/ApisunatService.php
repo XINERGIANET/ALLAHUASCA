@@ -425,16 +425,29 @@ class ApisunatService
                     }
                     if ($candidates->isEmpty()) {
                         $candidates = $movements->filter(
-                            fn (Movement $movement) => $this->normalizeCorrelative($movement->number) === $remote['number']
+                            fn (Movement $movement) => (empty($movement->electronic_invoice_external_id) || $movement->electronic_invoice_external_id === $remote['external_id'])
+                                && $movement->number === $remote['number_padded']
                         );
                     }
-                    if ($candidates->count() !== 1) {
-                        $typeProblems[] = "{$fullNumber} tiene {$candidates->count()} ventas locales candidatas";
+                    if ($candidates->isEmpty()) {
+                        $candidates = $movements->filter(
+                            fn (Movement $movement) => (empty($movement->electronic_invoice_external_id) || $movement->electronic_invoice_external_id === $remote['external_id'])
+                                && $this->normalizeCorrelative($movement->number) === $remote['number']
+                        );
+                    }
+
+                    $unlinkedCandidates = $candidates->filter(
+                        fn (Movement $movement) => empty($movement->electronic_invoice_external_id)
+                            || $movement->electronic_invoice_external_id === $remote['external_id']
+                    );
+
+                    if ($unlinkedCandidates->isEmpty()) {
+                        $typeProblems[] = "{$fullNumber} no tiene venta local candidata disponible";
                         continue;
                     }
 
                     /** @var Movement $movement */
-                    $movement = $candidates->first();
+                    $movement = $unlinkedCandidates->first();
                     if ($movement->electronic_invoice_external_id
                         && $movement->electronic_invoice_external_id !== $remote['external_id']) {
                         $typeProblems[] = "venta {$movement->id} ya enlazada a otro documento";
