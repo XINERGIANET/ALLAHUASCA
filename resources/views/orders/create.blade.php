@@ -594,11 +594,11 @@
                                             placeholder="Escribe el detalle que saldra en el comprobante">
                                     </div>
                                 </div>
-                                <div class="flex flex-wrap items-center gap-2 mb-3">
+                                <div class="flex flex-row flex-nowrap items-center gap-2 mb-3 overflow-x-auto pb-0.5">
                                     @if (!empty($split_account_enabled))
                                         <button type="button" onclick="openSplitAccountModal()"
-                                            class="inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-sm">
-                                            <i class="ri-scissors-cut-line text-lg text-[#111827]"></i>
+                                            class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-xs shrink-0 whitespace-nowrap">
+                                            <i class="ri-scissors-cut-line text-base text-[#111827] dark:text-white"></i>
                                             <span>Dividir cuenta</span>
                                         </button>
                                         <span id="split-inline-status"
@@ -608,17 +608,17 @@
                                     @endif
 
                                     <button type="button" onclick="toggleOrderDiscountPanel()" id="btn-toggle-discount-panel"
-                                        class="inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-sm">
-                                        <i class="ri-percent-line text-lg text-[#111827] dark:text-white"></i>
-                                        <span>Aplicar descuento</span>
-                                        <span id="discount-badge" class="hidden px-2 py-0.5 text-xs font-bold bg-[#111827] text-white rounded-full"></span>
+                                        class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-xs shrink-0 whitespace-nowrap">
+                                        <i class="ri-percent-line text-base text-[#111827] dark:text-white"></i>
+                                        <span>Descuento</span>
+                                        <span id="discount-badge" class="hidden px-1.5 py-0.5 text-[10px] font-bold bg-[#111827] text-white rounded-full"></span>
                                     </button>
 
                                     <button type="button" onclick="toggleOrderTipPanel()" id="btn-toggle-tip-panel"
-                                        class="inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-sm">
-                                        <i class="ri-heart-3-line text-lg text-emerald-600 dark:text-emerald-400"></i>
-                                        <span>Agregar propina</span>
-                                        <span id="tip-badge" class="hidden px-2 py-0.5 text-xs font-bold bg-emerald-600 text-white rounded-full"></span>
+                                        class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-xs shrink-0 whitespace-nowrap">
+                                        <i class="ri-heart-3-line text-base text-emerald-600 dark:text-emerald-400"></i>
+                                        <span>Propina</span>
+                                        <span id="tip-badge" class="hidden px-1.5 py-0.5 text-[10px] font-bold bg-emerald-600 text-white rounded-full"></span>
                                     </button>
                                 </div>
 
